@@ -1,0 +1,101 @@
+#!/bin/sh
+
+# Load python just in case (I think its loaded in my bashrc, but this is good too)
+ml load python/2.7.5
+
+###############
+# New dataset #
+###############
+#ALIGN_PARDIR=""    
+#DATASET_NAME=""
+#MODE="complete"    #mode is currently not used, complete is fine
+#NTRIM="13"         #ntrim is currently not used, 13 is fine
+#DENOVOCIRC="1"     #denovocirc is currently not used, 1 is fine
+
+
+# NOTE All calls are using the same flanking length
+# This is the desired seq len both sides of splice sites in denovo ind
+# flanking=100 will yield 200 long junction consensus seqs
+NUM_FLANKING=150
+OUT_FILE="spork_out.log"
+ERR_FILE="spork_out.err"
+
+####################
+# Ovarian datasets #
+####################
+#Could have done a loop, but this is fine
+#ALIGN_PARDIR="/scratch/PI/horence/rob/parent_dirs/ovarian/"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_ACAGTG"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_ACTTGA"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_ATCACG"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_CAGATC"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_CGATGT"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_CTTGTA"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_GATCAG"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_GCCAAT"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_GGCTAC"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_TAGCTT"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_TGACCA"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_TTAGGC"
+#DATASET_NAME="140701_HAVERS_0463_AC4GKDACXX_L8_unmatched"
+#MODE="complete"
+#NTRIM="13"
+#DENOVOCIRC="1"
+
+###################
+# EWS-FLI dataset #
+###################
+ALIGN_PARDIR="/scratch/PI/horence/rob/parent_dirs/EWS_FLI_bigmem/"
+DATASET_NAME="EWS_bigmem"
+MODE="complete"
+NTRIM="13"
+DENOVOCIRC="1"
+OUT_DIR="/scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy"
+
+###################
+#   Test dataset  #
+###################
+#ALIGN_PARDIR="/scratch/PI/horence/rob/parent_dirs/retro_test/"
+#DATASET_NAME="oldschool"
+#MODE="complete"
+#NTRIM="13"
+#DENOVOCIRC="1"
+
+###################
+# Ovarian dataset #
+###################
+#ALIGN_PARDIR="/scratch/PI/horence/rob/parent_dirs/FarJuncSecondary_ov/"
+#DATASET_NAME="Ovarian"
+#MODE="complete"
+#NTRIM="13"
+#DENOVOCIRC="1"
+
+####################
+# Engstrom dataset #
+####################
+#ALIGN_PARDIR="/scratch/PI/horence/gillian/Engstrom/"
+#DATASET_NAME="circpipe_engstrom"
+#MODE="complete"
+#NTRIM="13"
+#DENOVOCIRC="1"
+
+#################
+# Normal breast #
+#################
+#ALIGN_PARDIR="/scratch/PI/horence/gillian/normal_breast/"
+#DATASET_NAME="circpipe"
+#MODE="complete"
+#NTRIM="13"
+#DENOVOCIRC="1"
+
+################
+# Normal Fetal #
+################
+#ALIGN_PARDIR="/scratch/PI/horence/gillian/normal_fetal/"
+#DATASET_NAME="fetalcircpipe"
+#MODE="complete"
+#NTRIM="13"
+#DENOVOCIRC="1"
+
+#Make the actual call
+python denovo_pipeline.py $ALIGN_PARDIR $DATASET_NAME $MODE $NUM_FLANKING $NTRIM $DENOVOCIRC $OUT_DIR 1> $OUT_FILE 2> $ERR_FILE

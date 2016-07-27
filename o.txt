@@ -1,0 +1,60 @@
+/scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/spork_out/
+Found R2 file: /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/orig/unaligned/forDenovoIndex/unaligned_Fetal_Lung_395_AGTTCC_L007_R2.fq
+path: /home/rbierman/SPACHETE
+STATUS:generating StemList.txt from KNIFE output directory filenames
+NUM_FILES: 1
+STATUS:make FJ bowtie indices for each experiment
+STATUS:align unaligned reads to FJ index:  - check for /FJDir/FarJunctionAlignments/<STEM>/unaligned_<STEM>_R1/2.sam and /FJDir/FarJuncSecondary/<STEM>/still_unaligned_<STEM>_R1/2.fq
+this align of unaligned reads was added in july 2016; it takes place before the original one
+/home/rbierman/SPACHETE/AlignUnalignedtoFJ.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/orig 1
+STATUS:make naive rpt, new as of jul 2016, earlier than previous one 
+/home/rbierman/SPACHETE/FarJuncNaiveReport.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/orig 8 /home/rbierman/SPACHETE 1
+STATUS:STEM_ASSUMING_ONE_FILE is:Fetal_Lung_395_AGTTCC_L007
+
+python /home/rbierman/SPACHETE/parse_to_remove_FJ.py --stem Fetal_Lung_395_AGTTCC_L007 --outputdir /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy
+STATUS:make FJ bowtie indices for each experiment
+python /home/rbierman/SPACHETE/parse_to_remove_FJ.py --stem Fetal_Lung_395_AGTTCC_L007 --outputdir /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy
+STATUS:align unaligned reads to FJ index:  - check for /FJDir/FarJunctionAlignments/<STEM>/unaligned_<STEM>_R1/2.sam and /FJDir/FarJuncSecondary/<STEM>/still_unaligned_<STEM>_R1/2.fq
+this align of unaligned reads was added in july 2016; it takes place before the original one
+/home/rbierman/SPACHETE/AlignUnalignedtoFJ.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/orig 1
+STATUS:Identify Bad FJ's
+/home/rbierman/SPACHETE/LenientBadFJ_SLURM.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/fasta/Fetal_Lung_395_AGTTCC_L007_FarJunctions.fa /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /home/rbierman/SPACHETE
+/home/rbierman/SPACHETE/BowtieFJAligner.batch.sh "-f --no-sq --no-unal --score-min L,0,-0.24 --n-ceil L,0,100 -p 4 --np 0 --rdg 50,50 --rfg 50,50" /share/PI/horence/circularRNApipeline_Cluster/index/hg19_genome /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/fasta/Fetal_Lung_395_AGTTCC_L007_FarJunctions.fa /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtoGenome.sam
+BadFJ to genome
+/home/rbierman/SPACHETE/BowtieFJAligner.batch.sh "-f --no-sq --no-unal --score-min L,0,-0.24 --n-ceil L,0,100 -p 4 --np 0 --rdg 50,50 --rfg 50,50" /share/PI/horence/circularRNApipeline_Cluster/index/hg19_transcriptome /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/fasta/Fetal_Lung_395_AGTTCC_L007_FarJunctions.fa /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007__BadFJtotranscriptome.sam
+BadFJ to transcriptome
+/home/rbierman/SPACHETE/BowtieFJAligner.batch.sh "-f --no-sq --no-unal --score-min L,0,-0.24 --n-ceil L,0,100 -p 4 --np 0 --rdg 50,50 --rfg 50,50" /share/PI/horence/circularRNApipeline_Cluster/index/hg19_junctions_reg /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/fasta/Fetal_Lung_395_AGTTCC_L007_FarJunctions.fa /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtoReg.sam
+STATUS:BadFJ to reg
+STATUS:BadFJ to junc: 
+/home/rbierman/SPACHETE/BowtieFJAligner.batch.sh "-f --no-sq --no-unal --score-min L,0,-0.24 --n-ceil L,0,100 -p 4 --np 0 --rdg 50,50 --rfg 50,50" /share/PI/horence/circularRNApipeline_Cluster/index/hg19_junctions_scrambled /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/fasta/Fetal_Lung_395_AGTTCC_L007_FarJunctions.fa /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtoJunc.sam
+/home/rbierman/SPACHETE/BowtieAligner_BadFJv2.sh "--no-unal --no-mixed --no-sq -p 8 -I 0 -X 50000 -f --ff -x /share/PI/horence/circularRNApipeline_Cluster/index/hg19_genome -1 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R1.fa -2 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R2.fa -S /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtoGenome.sam"
+STATUS:BadFJ_ver2 to genome
+/home/rbierman/SPACHETE/BowtieAligner_BadFJv2.sh "--no-unal --no-mixed  --no-sq -p 8 -I 0 -X 50000 -f --ff -x /share/PI/horence/circularRNApipeline_Cluster/index/hg19_transcriptome -1 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R1.fa -2 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R2.fa -S /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtotranscriptome.sam"
+STATUS:BadFJ_ver2 to transcriptome
+/home/rbierman/SPACHETE/BowtieAligner_BadFJv2.sh "--no-unal --no-mixed --no-sq -p 8 -I 0 -X 50000 -f --ff -x /share/PI/horence/circularRNApipeline_Cluster/index/hg19_junctions_reg -1 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R1.fa -2 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R2.fa -S /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtoReg.sam"
+STATUS:BadFJ_ver2 to reg
+/home/rbierman/SPACHETE/BowtieAligner_BadFJv2.sh "--no-unal --no-mixed --no-sq -p 8 -I 0 -X 50000 -f --ff -x /share/PI/horence/circularRNApipeline_Cluster/index/hg19_junctions_scrambled -1 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R1.fa -2 /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_FarJunctions_R2.fa -S /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/BadFJ_ver2/Fetal_Lung_395_AGTTCC_L007/Fetal_Lung_395_AGTTCC_L007_BadFJtoJunc.sam"
+STATUS:BadFJ_ver2 to junc
+STATUS:align unaligned reads to FJ index:  - check for /FJDir/FarJunctionAlignments/<STEM>/unaligned_<STEM>_R1/2.sam and /FJDir/FarJuncSecondary/<STEM>/still_unaligned_<STEM>_R1/2.fq
+/home/rbierman/SPACHETE/AlignUnalignedtoFJ.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/orig 1
+STATUS:make naive rpt
+/home/rbierman/SPACHETE/FarJuncNaiveReport.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/orig 8 /home/rbierman/SPACHETE 1
+STATUS:make FJ class input files
+/home/rbierman/SPACHETE/parse_FJ_ID_for_GLM.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy 1
+STATUS:make indel files
+/home/rbierman/SPACHETE/MakeIndelFiles.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy 5 /home/rbierman/SPACHETE 1
+STATUS:index indels
+STATUS:align to indels
+STATUS:make indels histo
+/home/rbierman/SPACHETE/FindAlignmentArtifact_SLURM.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy 8 5 /home/rbierman/SPACHETE 1
+STATUS:Aligning unaligned files to linear junc indels
+STATUS:Reg Indels Class Output
+/home/rbierman/SPACHETE/RegIndelsClassID.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung 8 /home/rbierman/SPACHETE 1
+STATUS:FJ Indels Class Output
+/home/rbierman/SPACHETE/FJIndelsClassID.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung 8 /home/rbierman/SPACHETE 1
+STATUS:FJ Indels Class Output
+STATUS:Run GLM
+/home/rbierman/SPACHETE/run_GLM.sh /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /home/rbierman/SPACHETE 1
+STATUS: append naive rpt
+/home/rbierman/SPACHETE/AppendNaiveRept.sh /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy /scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung/circReads/glmReports /home/rbierman/SPACHETE /scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy/reports/glmReports 1
+STATUS: done
