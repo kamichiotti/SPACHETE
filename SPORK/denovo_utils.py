@@ -133,12 +133,13 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
         id_to_seq[key] = value
 
     # walk through each bin_pair_group
+    write_time("Working on the jcts :"+str(len(bin_pair_group_ranges)),time.time(),constants_dict["timer_file_path"])
     for bin_pair_group_range in bin_pair_group_ranges:
-        junction_num = "("+str(bin_pair_group_ranges.index(bin_pair_group_range)+1)+"/"+str(len(bin_pair_group_ranges))+")"
+        #junction_num = "("+str(bin_pair_group_ranges.index(bin_pair_group_range)+1)+"/"+str(len(bin_pair_group_ranges))+")"
         #print junction_num
-        sys.stdout.flush()
+        #sys.stdout.flush()
 
-        start_build_junction = time.time()
+        #start_build_junction = time.time()
         start_ind = bin_pair_group_range[0]
         stop_ind = bin_pair_group_range[1]
         group_members = bin_pairs[start_ind:stop_ind]
@@ -176,7 +177,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
             denovo_junctions.append(denovo_junction)
 
 
-        write_time("-Time to completely process a single junction: "+junction_num,start_build_junction,constants_dict["timer_file_path"])
+        #write_time("-Time to completely process a single junction: "+junction_num,start_build_junction,constants_dict["timer_file_path"])
     return denovo_junctions
 
 

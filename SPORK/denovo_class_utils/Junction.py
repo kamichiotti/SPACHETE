@@ -334,13 +334,17 @@ class Junction(object):
         fasta_str += "genes1:"+str(self.upstream_sam.str_gene())+"|"
         fasta_str += "start1:"+str(self.upstream_sam.start)+"|"
         fasta_str += "stop1:"+str(self.upstream_sam.stop)+"|"
-        fasta_str += "strand1:"+str(self.upstream_sam.strand)+"|_"
+        fasta_str += "strand1:"+str(self.upstream_sam.strand)+"|"
+        fasta_str += "boundary_dist1:"+str(self.boundary_dist("upstream"))+"|"
+        fasta_str += "at_boundary1:"+str(self.at_boundary("upstream"))+"|_"
 
         fasta_str += "|chromosome2:"+str(self.downstream_sam.chromosome)+"|"
         fasta_str += "genes2:"+str(self.downstream_sam.str_gene())+"|"
         fasta_str += "start2:"+str(self.downstream_sam.start)+"|"
         fasta_str += "stop2:"+str(self.downstream_sam.stop)+"|"
         fasta_str += "strand2:"+str(self.downstream_sam.strand)+"|"
+        fasta_str += "boundary_dist2:"+str(self.boundary_dist("downstream"))+"|"
+        fasta_str += "at_boundary2:"+str(self.at_boundary("downstream"))+"|_|"
 
         fasta_str += "splice:"+str(self.splice_ind())+"|"
         fasta_str += "span:"+str(self.span())+"|"

@@ -23,8 +23,9 @@
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/EWS_FLI_bigmem/EWS_bigmem"
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/NSC_diff/NSC_diff_test"
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/circpipe_engstrom"
-KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung"
-OUT_DIR="/scratch/PI/horence/rob/machete_outputs/fetal_lung_test_toy"
+#KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/fetal_lung/fetal_lung"
+KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/slurm_tester"
 EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
 #INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/IndelIndices"
 INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
@@ -39,5 +40,4 @@ OPTIONS="$OPTIONS --hg19Exons $EXONS_DIR"
 OPTIONS="$OPTIONS --reg-indel-indices $INDEL_INDICES"
 OPTIONS="$OPTIONS --circref-dir $CIRC_REF"
 
-#Call run.py with the options string
-python spork_run.py $OPTIONS 1> o.txt 2> o.err
+python spachete_feeder.py $OPTIONS 1> o.txt 2> o.err

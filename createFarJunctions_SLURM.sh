@@ -96,9 +96,9 @@ echo "old error files exist -- removing"
 rm ${OUTPUT_DIR}err_and_out/*
 fi
 
-if [ -e ${OUTPUT_DIR}MasterError.txt ]
+if [ -e ${OUTPUT_DIR}/MasterError.txt ]
 then
-rm ${OUTPUT_DIR}MasterError.txt
+rm ${OUTPUT_DIR}/MasterError.txt
 fi
 
 

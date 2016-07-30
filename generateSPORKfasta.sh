@@ -35,5 +35,5 @@ rm ${2}fasta/${STEM}/*
 #ml load python/2.7.5
 python denovo_pipeline_GH.py ${ORIGDIR} ${STEM} ${MODE} ${NUMFLANKING} ${NUMBASES} ${DENOVOCIRC} ${OUTPUTDIR}
 python SPORK_reformat_header.py -f ${OUTPUTDIR} -s ${STEM}
-echo "successfully generated SPORK fastas in ${OUTPUTDIR}" >> ${2}MasterError.txt
+echo "successfully generated SPORK fastas in ${OUTPUTDIR}" >> ${2}/MasterError.txt
 fi
