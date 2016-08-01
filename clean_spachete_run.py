@@ -198,7 +198,7 @@ NUM_FLANKING = "150"
 #This should be blocking
 start_time = time.time()
 SPORK_STEM_NAME = open(StemFile,"r").readline().strip()
-subprocess.call(["python","SPORK/denovo_pipeline.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
+subprocess.call(["python","SPORK/denovo_pipeline_R2.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
 write_time("Run spork",start_time,timer_file_path)
 
 #Make the bowtie index building call on the spork fasta

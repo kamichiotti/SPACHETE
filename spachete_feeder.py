@@ -89,15 +89,20 @@ else:
     subprocess.check_call("python {MACHETE}/writeStemIDFiles.py -o {ORIG_DIR} -f {OUTPUT_DIR}".format(MACHETE=MACHETE,ORIG_DIR=ORIG_DIR,OUTPUT_DIR=OUTPUT_DIR),shell=True)
 
 
-
+include_stems = ["Human_simulated_reads1"]
 
 #Building output directories for each Stem
 processes = []
 with open(FullStemFile,"r") as stem_file:
     stems = stem_file.readlines()
     for stem in sorted(stems):
-        print stem
         stem = stem.strip()
+        print stem
+        #Uncomment to skip some of the stems as defined in the include list above
+        if stem not in include_stems:
+            print stem+" not in include stems, skipping "+stem
+            continue
+
         OUTPUT_DIR = args.OUTPUT_DIR
         OUTPUT_DIR += "/"+stem
         if not os.path.isdir(OUTPUT_DIR):
@@ -174,14 +179,14 @@ with open(FullStemFile,"r") as stem_file:
         machete_out = open(os.path.join(OUTPUT_DIR,"mach_"+stem+".out"),"w")
         machete_err = open(os.path.join(OUTPUT_DIR,"mach_"+stem+".err"),"w")
 
-        subprocess.call(["sbatch","-p","owners","--mem=20000","--time=24:00:00",
+        #NOTE I'm giving 30GBs to each job, which might not be enough
+        subprocess.call(["sbatch","-p","horence","--mem=30000","--time=24:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
 
 
-        ##NOTE !!! exiting after a single iteration
-        #sys.exit(1)
         """
+        #This is for multithreading w/out submitting a new job
         processes.append(subprocess.Popen(["python","spachete_run.py",
                                            "--circpipe-dir",CIRCPIPE_DIR,
                                            "--output-dir",OUTPUT_DIR,

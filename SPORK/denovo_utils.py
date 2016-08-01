@@ -186,7 +186,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
 ########################
 # Runs bowtie on all of the possible splice sites of all possible junctions
 # Returns a dict keyed by jct_id and valued by a list of cut sites
-def find_splice_inds(denovo_junctions,constants_dict):
+def find_splice_inds(denovo_junctions,constants_dict,r_ind=1):
     """
     Goal: find where in the consensus sequence to make and upstream and downstream cut
     Arguments:
@@ -198,7 +198,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
         to allow for continuing with only jcts that had a splice site found
     """
     # Gather info from the constants dictionary
-    splice_finder_temp_name = constants_dict["out_dir"]+"splice_finder_temp_"
+    splice_finder_temp_name = constants_dict["out_dir"]+"R"+str(r_ind+1)+"_splice_finder_temp_"
     min_score = constants_dict["splice_finding_min_score"]
     max_mismatches = int(constants_dict["splice_finding_allowed_mismatches"])
     read_gap_score = constants_dict["read_gap_score"]
