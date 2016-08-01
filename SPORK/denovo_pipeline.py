@@ -187,6 +187,7 @@ for file_name in file_names:
     R2_file_name = R1_file_name.split(R1_pattern)[0]+R2_pattern+R1_file_name.split(R1_pattern)[1]
     R2_file_path = out_dir+R2_file_name
     full_paths_out = [R1_file_path,R2_file_path]
+    R1_R2_names = [R1_file_name,R2_file_name]
 
     # Remove spaces from the header lines of the fq file (also remove the last split ind)
     # NOTE creates a no_spaces version of each file removing spaces in header lines
@@ -225,187 +226,207 @@ for file_name in file_names:
         write_time("Time to remove spaces "+f_name,start_remove_spaces,timer_file_path)
         write_time("--> Had "+str(num_reads)+" reads",start_remove_spaces,timer_file_path)
 
-
-    # Process the file to split each read into a 5' and 3' fastq file
-    start_split_reads = time.time()
-    five_prime_fq_name = out_dir + "5prime_" + R1_file_name.split(".")[0] + ".fq"
-    three_prime_fq_name = out_dir + "3prime_" + R1_file_name.split(".")[0] + ".fq"
-    if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name):
-        write_time("Using previous split unaligned read files "+R1_file_name,start_split_reads,timer_file_path)
-    else:
-        with open(five_prime_fq_name, "w") as five_prime_file:
-            with open(three_prime_fq_name, "w") as three_prime_file:
-                #NOTE THIS is where only R1 is being used instead of both R1 and R2
-                with open(R1_file_path, "r") as f_in:
-                    read_id = f_in.readline()
-                    while read_id:
-                        seq = f_in.readline()
-                        plus_line = f_in.readline()
-                        quality = f_in.readline()
-                        fastq_read = FastQEntry(read_id, seq, plus_line, quality)
-                        fragment_5, fragment_3 = fastq_read.get_edge_thirds()
-                        five_prime_file.write(str(fragment_5))
-                        three_prime_file.write(str(fragment_3))
+    #Do the SPORK main code for both R1 and R2 if they are both available
+    for r_ind in range(len(full_paths_out)):
+        # Process the file to split each read into a 5' and 3' fastq file
+        write_time("Starting main portion R"+str(r_ind+1),time.time(),timer_file_path)
+        start_split_reads = time.time()
+        R_file_path = full_paths_out[r_ind]
+        R_file_name = R1_R2_names[r_ind]
+        five_prime_fq_name = out_dir + "R"+str(r_ind+1)+"_5prime_" + R_file_name.split(".")[0] + ".fq"
+        three_prime_fq_name = out_dir + "R"+str(r_ind+1)+"_3prime_" + R_file_name.split(".")[0] + ".fq"
+        if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name):
+            write_time("Using previous split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
+        else:
+            with open(five_prime_fq_name, "w") as five_prime_file:
+                with open(three_prime_fq_name, "w") as three_prime_file:
+                    #NOTE THIS is where only R1 is being used instead of both R1 and R2
+                    with open(R_file_path, "r") as f_in:
                         read_id = f_in.readline()
-        write_time("Time to make split unaligned read files "+R1_file_name,start_split_reads,timer_file_path)
+                        while read_id:
+                            seq = f_in.readline()
+                            plus_line = f_in.readline()
+                            quality = f_in.readline()
+                            fastq_read = FastQEntry(read_id, seq, plus_line, quality)
+                            fragment_5, fragment_3 = fastq_read.get_edge_thirds()
+                            five_prime_file.write(str(fragment_5))
+                            three_prime_file.write(str(fragment_3))
+                            read_id = f_in.readline()
+            write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
 
-    # Map the 5' and 3' split files to the reference to generate the sam files
-    # NOTE this can take a very long time for large R1 files
-    start_split_mapping = time.time()
-    five_prime_mapped_name = five_prime_fq_name.split(".")[0] + ".sam"
-    three_prime_mapped_name = three_prime_fq_name.split(".")[0] + ".sam"
-    if use_prior and os.path.isfile(five_prime_mapped_name) and os.path.isfile(three_prime_mapped_name):
-        write_time("Using previous split unaligned reads "+R1_file_name,start_split_mapping,timer_file_path)
-    else:
-        five_prime_mapped = open(five_prime_mapped_name, "w")
-        three_prime_mapped = open(three_prime_mapped_name, "w")
+        # Map the 5' and 3' split files to the reference to generate the sam files
+        # NOTE this can take a very long time for large R1 files
         start_split_mapping = time.time()
-        subprocess.call(
-            ["bowtie2", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
-             "--un", out_dir + "unaligned_5prime_" + R1_file_name, "-x", reference, five_prime_fq_name], stdout=five_prime_mapped)
-        write_time("Time to map split unaligned reads 5'"+R1_file_name,start_split_mapping,timer_file_path)
-        start_split_mapping = time.time()
-        subprocess.call(
-            ["bowtie2", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
-             "--un", out_dir + "unaligned_3prime_" + R1_file_name, "-x", reference, three_prime_fq_name], stdout=three_prime_mapped)
-        write_time("Time to map split unaligned reads 3'"+R1_file_name,start_split_mapping,timer_file_path)
-        five_prime_mapped.close()
-        three_prime_mapped.close()
+        five_prime_mapped_name = five_prime_fq_name.split(".")[0] + ".sam"
+        three_prime_mapped_name = three_prime_fq_name.split(".")[0] + ".sam"
+        if use_prior and os.path.isfile(five_prime_mapped_name) and os.path.isfile(three_prime_mapped_name):
+            write_time("Using previous split unaligned reads "+R_file_name,start_split_mapping,timer_file_path)
+        else:
+            five_prime_mapped = open(five_prime_mapped_name, "w")
+            three_prime_mapped = open(three_prime_mapped_name, "w")
+            start_split_mapping = time.time()
+            subprocess.call(
+                ["bowtie2", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
+                 "--un", out_dir + "R"+str(r_ind+1)+"_unaligned_5prime_" + R_file_name, "-x", reference, five_prime_fq_name], stdout=five_prime_mapped)
+            write_time("Time to map split unaligned reads 5'"+R_file_name,start_split_mapping,timer_file_path)
+            start_split_mapping = time.time()
+            subprocess.call(
+                ["bowtie2", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
+                 "--un", out_dir + "R"+str(r_ind+1)+"_unaligned_3prime_" + R_file_name, "-x", reference, three_prime_fq_name], stdout=three_prime_mapped)
+            write_time("Time to map split unaligned reads 3'"+R_file_name,start_split_mapping,timer_file_path)
+            five_prime_mapped.close()
+            three_prime_mapped.close()
 
-    ##########################
-    # Build Denovo Jct Fasta #
-    ##########################
-    # Make the fasta file to build the bowtie index from in the following steps:
-    # [1] Store all 5' mappings in a dict by shared read id
-    # [2] Walk through the 3' mappings and add them and their 5' counterpart to a bin_pair list
-    # [3] Find the group ranges within the bin_pair list
-    # [4] Build the denovo jcts
-    # [5] Collapse the denovo jcts
-    # [6] Get GTF annotation data for each jct
-    # [7] Write out the denovo jcts
-    fasta_for_bowtie_index_name = out_dir+"novel_junctions.fasta"
-    gtfs = generate_gtfs(gtf)
+        ##########################
+        # Build Denovo Jct Fasta #
+        ##########################
+        # Make the fasta file to build the bowtie index from in the following steps:
+        # [1] Store all 5' mappings in a dict by shared read id
+        # [2] Walk through the 3' mappings and add them and their 5' counterpart to a bin_pair list
+        # [3] Find the group ranges within the bin_pair list
+        # [4] Build the denovo jcts
+        # [5] Collapse the denovo jcts
+        # [6] Get GTF annotation data for each jct
+        # [7] Write out the denovo jcts
+        fasta_for_bowtie_index_name = out_dir+"R"+str(r_ind+1)+"_novel_junctions.fasta"
+        gtfs = generate_gtfs(gtf)
 
-    if use_prior and os.path.isfile(fasta_for_bowtie_index_name):
-        write_time("Using prior jcts: "+fasta_for_bowtie_index_name,time.time(),timer_file_path)
-    else:
-        # Store all five prime mappings by base_read_id (read_id w/out 5_prime or 3_prime)
-        # There should not be two identical base_read_id's
-        id_to_sam_dict = {}
-        with open(five_prime_mapped_name,"r") as five_prime_mapped:
-            sam_line = five_prime_mapped.readline()
-            while sam_line and "@" == sam_line[0]: #Read past the header lines
+        if use_prior and os.path.isfile(fasta_for_bowtie_index_name):
+            write_time("Using prior jcts: "+fasta_for_bowtie_index_name,time.time(),timer_file_path)
+        else:
+            # Store all five prime mappings by base_read_id (read_id w/out 5_prime or 3_prime)
+            # There should not be two identical base_read_id's
+            id_to_sam_dict = {}
+            with open(five_prime_mapped_name,"r") as five_prime_mapped:
                 sam_line = five_prime_mapped.readline()
+                while sam_line and "@" == sam_line[0]: #Read past the header lines
+                    sam_line = five_prime_mapped.readline()
 
-            while sam_line:
-                sam_entry = SAMEntry(sam_line)
-                base_read_id = sam_entry.read_id.split("/")[0]
-                if base_read_id in id_to_sam_dict:
-                    sys.stderr.write("ERROR: Found duplicate base_read_id in 5_prime mappings\n")
-                    sys.exit(1)
-                # Filter out the strange chromosomes: (e.g. chrUn_gl000220)
-                if "_" not in sam_entry.chromosome:
-                    id_to_sam_dict[base_read_id] = sam_entry
-                sam_line = five_prime_mapped.readline()
-                
-        # Now walk through the three prime mappings creating bin pairs from all shared ids
-        bin_pairs = []
-        with open(three_prime_mapped_name,"r") as three_prime_mapped:
-            sam_line = three_prime_mapped.readline()
-            while sam_line and "@" == sam_line[0]: #Read past the header lines
+                while sam_line:
+                    sam_entry = SAMEntry(sam_line)
+                    base_read_id = sam_entry.read_id.split("/")[0]
+                    if base_read_id in id_to_sam_dict:
+                        sys.stderr.write("ERROR: Found duplicate base_read_id in 5_prime mappings\n")
+                        sys.exit(1)
+                    # Filter out the strange chromosomes: (e.g. chrUn_gl000220)
+                    if "_" not in sam_entry.chromosome:
+                        id_to_sam_dict[base_read_id] = sam_entry
+                    sam_line = five_prime_mapped.readline()
+                    
+            # Now walk through the three prime mappings creating bin pairs from all shared ids
+            bin_pairs = []
+            with open(three_prime_mapped_name,"r") as three_prime_mapped:
                 sam_line = three_prime_mapped.readline()
+                while sam_line and "@" == sam_line[0]: #Read past the header lines
+                    sam_line = three_prime_mapped.readline()
 
-            while sam_line:
-                three_prime_sam = SAMEntry(sam_line)
-                base_read_id = three_prime_sam.read_id.split("/")[0]
-                # Filter out the strange chromosomes: (e.g. chrUn_gl000220)
-                if "_" not in three_prime_sam.chromosome and base_read_id in id_to_sam_dict:
-                    five_prime_sam = id_to_sam_dict[base_read_id]
-                    five_prime_bin = five_prime_sam.start/bin_size
-                    three_prime_bin = three_prime_sam.start/bin_size
-                    bin_pair = BinPair(five_prime_sam,three_prime_sam,five_prime_bin,three_prime_bin)
-                    bin_pairs.append(bin_pair)
-                sam_line = three_prime_mapped.readline()
-        id_to_sam_dict = {} #clearing the dictionary to free up space
+                while sam_line:
+                    three_prime_sam = SAMEntry(sam_line)
+                    base_read_id = three_prime_sam.read_id.split("/")[0]
+                    # Filter out the strange chromosomes: (e.g. chrUn_gl000220)
+                    if "_" not in three_prime_sam.chromosome and base_read_id in id_to_sam_dict:
+                        five_prime_sam = id_to_sam_dict[base_read_id]
+                        five_prime_bin = five_prime_sam.start/bin_size
+                        three_prime_bin = three_prime_sam.start/bin_size
+                        bin_pair = BinPair(five_prime_sam,three_prime_sam,five_prime_bin,three_prime_bin)
+                        bin_pairs.append(bin_pair)
+                    sam_line = three_prime_mapped.readline()
+            id_to_sam_dict = {} #clearing the dictionary to free up space
 
-        # Sort the bin_pairs by bin_pair id to form list w/ groups adjacent
-        bin_pairs.sort()
+            # Sort the bin_pairs by bin_pair id to form list w/ groups adjacent
+            bin_pairs.sort()
 
-        # Save the bin_pairs to a file to see how they look
-        bin_pair_out_file_name = out_dir+"bin_pairs.txt"
-        with open(bin_pair_out_file_name, "w") as f:
-            for bin_pair in bin_pairs:
-                f.write(str(bin_pair))
+            # Save the bin_pairs to a file to see how they look
+            bin_pair_out_file_name = out_dir+"R"+str(r_ind+1)+"_bin_pairs.txt"
+            with open(bin_pair_out_file_name, "w") as f:
+                for bin_pair in bin_pairs:
+                    f.write(str(bin_pair))
 
-        # Group the bin pairs by finding their index ranges within bin_pairs
-        start_build_group_ranges = time.time()
-        bin_pair_group_ranges = find_bin_pair_group_ranges(bin_pairs,constants_dict)
-        write_time("-Time to build group ranges",start_build_group_ranges,timer_file_path)
+            # Group the bin pairs by finding their index ranges within bin_pairs
+            start_build_group_ranges = time.time()
+            bin_pair_group_ranges = find_bin_pair_group_ranges(bin_pairs,constants_dict)
+            write_time("-Time to build group ranges",start_build_group_ranges,timer_file_path)
 
-        # Build the junctions from bin pairs and their ends
-        denovo_junctions = []
-        start_build_junctions = time.time()
-        denovo_junctions = build_junction_sequences(bin_pairs,bin_pair_group_ranges,R1_file_path,constants_dict)
-        write_time("-Time to build junctions ",start_build_junctions,timer_file_path)
-        bin_pairs = [] #clearing the bin pairs to free up space
+            # Build the junctions from bin pairs and their ends
+            denovo_junctions = []
+            start_build_junctions = time.time()
+            denovo_junctions = build_junction_sequences(bin_pairs,bin_pair_group_ranges,R_file_path,constants_dict)
+            write_time("-Time to build junctions ",start_build_junctions,timer_file_path)
+            bin_pairs = [] #clearing the bin pairs to free up space
 
-        # Find the splice indicies of the junctions
-        start_find_splice_inds = time.time()
-        denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
-        write_time("-Time to find splice indicies ",start_find_splice_inds,timer_file_path)
+            # Find the splice indicies of the junctions
+            start_find_splice_inds = time.time()
+            denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict,r_ind)
+            write_time("-Time to find splice indicies ",start_find_splice_inds,timer_file_path)
 
 
 
-        # Collapse the junctions that have the same splice site
-        # TODO I can't figure out how to get jct collapsing working so I'm just removing it for now
-        # TODO there is some sort of offset error
-        """
-        start_collapse_junctions = time.time()
-        denovo_junctions = collapse_junctions(denovo_junctions)
-        write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
-        """
+            # Collapse the junctions that have the same splice site
+            # TODO I can't figure out how to get jct collapsing working so I'm just removing it for now
+            # TODO there is some sort of offset error
+            """
+            start_collapse_junctions = time.time()
+            denovo_junctions = collapse_junctions(denovo_junctions)
+            write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
+            """
 
-        # Get GTF information for the identified denovo_junctions
-        start_get_jct_gtf_info = time.time()
-        get_jct_gtf_info(denovo_junctions,gtfs)
-        write_time("Time to get jct gtf info "+R1_file_name,start_get_jct_gtf_info,timer_file_path)
-        print len(denovo_junctions)
+            # Get GTF information for the identified denovo_junctions
+            start_get_jct_gtf_info = time.time()
+            get_jct_gtf_info(denovo_junctions,gtfs)
+            write_time("Time to get jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
+            print len(denovo_junctions)
 
-        # Identify fusions from the junctions
-        start_identify_fusions = time.time()
-        fusion_junctions = identify_fusions(denovo_junctions)
-        sys.stderr.write("Len fusion jcts = "+str(len(fusion_junctions))+"\n")
-        write_time("Time to identify fusions"+R1_file_name,start_identify_fusions,timer_file_path)
+            # Identify fusions from the junctions
+            start_identify_fusions = time.time()
+            fusion_junctions = identify_fusions(denovo_junctions)
+            sys.stderr.write("Len fusion jcts = "+str(len(fusion_junctions))+"\n")
+            write_time("Time to identify fusions "+R_file_name,start_identify_fusions,timer_file_path)
 
-        #########################################################
-        # Write out the denovo_junction_sequences for each file #
-        #########################################################
-        start_save_denovo_junctions = time.time()
-        machete_style_name = out_dir+"novel_junctions_machete.fasta"
-        jct_style_file_name = out_dir+"novel_junctions.jct"
-        fusions_file_name = out_dir+"novel_fusions.fasta"
+            #########################################################
+            # Write out the denovo_junction_sequences for each file #
+            #########################################################
+            start_save_denovo_junctions = time.time()
+            machete_style_name = out_dir+"R"+str(r_ind+1)+"_novel_junctions_machete.fasta"
+            jct_style_file_name = out_dir+"R"+str(r_ind+1)+"_novel_junctions.jct"
+            fusions_file_name = out_dir+"R"+str(r_ind+1)+"_novel_fusions.fasta"
 
-        # Open the three output files
-        fasta_for_bowtie_index = open(fasta_for_bowtie_index_name, "w")
-        machete_style_file = open(machete_style_name, "w")
-        jct_style_file = open(jct_style_file_name, "w")
-        fusions_file = open(fusions_file_name, "w")
+            # Open the three output files
+            fasta_for_bowtie_index = open(fasta_for_bowtie_index_name, "w")
+            machete_style_file = open(machete_style_name, "w")
+            jct_style_file = open(jct_style_file_name, "w")
+            fusions_file = open(fusions_file_name, "w")
 
-        # Loop through the denovo junctions writing them where necessary
-        for denovo_junction in denovo_junctions:
-            jct_ind = denovo_junctions.index(denovo_junction)
-            fasta_for_bowtie_index.write(denovo_junction.verbose_fasta_string())
-            machete_style_file.write(denovo_junction.fasta_MACHETE())
-            jct_style_file.write(str(denovo_junction)+"\n")
-            if denovo_junction in fusion_junctions:
-                fusions_file.write(denovo_junction.fasta_MACHETE())
+            # Loop through the denovo junctions writing them where necessary
+            for denovo_junction in denovo_junctions:
+                jct_ind = denovo_junctions.index(denovo_junction)
+                fasta_for_bowtie_index.write(denovo_junction.verbose_fasta_string())
+                machete_style_file.write(denovo_junction.fasta_MACHETE())
+                jct_style_file.write(str(denovo_junction)+"\n")
+                if denovo_junction in fusion_junctions:
+                    fusions_file.write(denovo_junction.fasta_MACHETE())
 
-        # Close the three output files
-        fasta_for_bowtie_index.close()
-        machete_style_file.close()
-        jct_style_file.close()
-        fusions_file.close()
-        write_time("Time to save denovo junctions "+R1_file_name,start_save_denovo_junctions,timer_file_path)
-        denovo_junctions = [] #NOTE clearing the denovo junctions to free up space
+            # Close the three output files
+            fasta_for_bowtie_index.close()
+            machete_style_file.close()
+            jct_style_file.close()
+            fusions_file.close()
+            write_time("Time to save denovo junctions "+R_file_name,start_save_denovo_junctions,timer_file_path)
+            denovo_junctions = [] #NOTE clearing the denovo junctions to free up space
         
+    #Combine the two machete style fastas for SPACHETE
+    full_machete_style_name = out_dir+"novel_junctions_machete.fasta"
+    with open(full_machete_style_name,"w") as full_machete_style:
+        R1_machete_style_name = out_dir+"R1_novel_junctions_machete.fasta"
+        if os.path.isfile(R1_machete_style_name):
+            for R1_line in open(R1_machete_style_name,"r"):
+                full_machete_style.write(R1_line)
+
+        R2_machete_style_name = out_dir+"R2_novel_junctions_machete.fasta"
+        if os.path.isfile(R2_machete_style_name):
+            for R2_line in open(R2_machete_style_name,"r"):
+                full_machete_style.write(R2_line)
+
+           
 write_time("Entire time",start_entire_time,timer_file_path)
+
+

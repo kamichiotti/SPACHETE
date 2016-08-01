@@ -28,7 +28,7 @@
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
 KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/engstrom"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/engstrom_clean_test"
 EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
 #INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/IndelIndices"
 INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"

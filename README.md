@@ -1,3 +1,16 @@
+# SPACHETE
+Flow of SPACHETE:
+1. SPACHETE_wrapper.sh, which is just a wrapper script to assign paths and then pass them into spachete_feeder.py
+2. spachete_feeder.py which creates output directories, and calls spachete_run.py in a parallel way
+3. spachete_run.py which is basically "run.py" but with a SPORK call placed in there and some machete calls removed
+   the actual SPORK call is to "SPORK/denovo_pipeline.py
+
+The output directory of SPACHETE will have a subdirectory for each stem, and each of these subdirectories
+will look the same as that of MACHETE, with an additional folder called "spork_out" which has the spork run data and information
+
+In the "spachete_feeder.py" around line 190 are the different ways to make the multiple stem files get run in parallel, currently it is
+set to just use subprocess, but it can also submit multiple SLURM jobs.
+
 # MACHETE
 More Accurate vs Mismatched Alignment CHimEra Tracking Engine
 
