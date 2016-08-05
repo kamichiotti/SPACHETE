@@ -33,12 +33,13 @@ class FastQEntry(object):
         """
         third_len = len(self.seq)/3
         if third_len*2 > len(self.seq):
-            print "Read is too short to split"
+            sys.stderr.write("Read is too short to split\n")
             sys.exit(1)
         five_prime_seq = self.seq[:third_len]
         three_prime_seq = self.seq[2*third_len:]
         five_prime_read = FastQEntry(self.read_id+"/5_prime",five_prime_seq,self.plus_line,self.quality[:third_len])
         three_prime_read = FastQEntry(self.read_id+"/3_prime",three_prime_seq,self.plus_line,self.quality[2*third_len:])
+
         return five_prime_read,three_prime_read
         
     def clean(self):

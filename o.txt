@@ -1,2 +1,3 @@
-Found R2 file: /scratch/PI/horence/gillian/Engstrom/circpipe_engstrom/orig/unaligned/forDenovoIndex/unaligned_Human_simulated_reads1_2.fq
-Found R2 file: /scratch/PI/horence/gillian/Engstrom/circpipe_engstrom/orig/unaligned/forDenovoIndex/unaligned_Human_simulated_reads2_2.fq
+STATUS:using existing FullStemList.txt
+ERR1549500
+Done

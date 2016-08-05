@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from bisect import bisect_left
 import subprocess
 import shutil
 import time
@@ -25,6 +26,11 @@ print "path:",MACHETE
 # name output directory
 # minimum number of base pairs apart that user wants to find paired ends
 # need pickle file for
+
+def binary_search(a, x, lo=0, hi=None):   # can't use a to specify default for hi
+    hi = hi if hi is not None else len(a) # hi defaults to len(a)   
+    pos = bisect_left(a,x,lo,hi)          # find insertion position
+    return (pos if pos != hi and a[pos] == x else -1) # don't walk off the end
 
 def checkProcesses(popenDict):
     """
@@ -198,7 +204,7 @@ NUM_FLANKING = "150"
 #This should be blocking
 start_time = time.time()
 SPORK_STEM_NAME = open(StemFile,"r").readline().strip()
-subprocess.call(["python","SPORK/denovo_pipeline.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
+subprocess.call(["python","SPORK/denovo_pipeline_combined.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
 write_time("Run spork",start_time,timer_file_path)
 
 #Make the bowtie index building call on the spork fasta
@@ -725,6 +731,35 @@ for i in range(1,NumIndels + 1):
         processes[popen] = {"stdout":stdout,"stderr":stderr,"cmd":cmd}
     checkProcesses(processes)
     write_time("Align linear indels "+str(i),start_time,timer_file_path)
+
+
+##Filter out reads used to build the SPORK junctions before they get
+##to the GLM.
+start_time = time.time()
+used_ids_name = os.path.join(OUTPUT_DIR,"spork_out","used_read_ids.txt")
+glm_input_name = os.path.join(OUTPUT_DIR,"GLM_classInput",SPORK_STEM_NAME+"_1__output_FJ.txt")
+filtered_glm_outupt_name = glm_input_name+".tmp"
+
+sys.stdout.write("Starting filtering\n")
+glm_output = open(filtered_glm_outupt_name,"w")
+with open(used_ids_name,"r") as used_ids_file:
+    used_ids = sorted(used_ids_file.readlines())
+    for glm_line in open(glm_input_name,"r"):
+        glm_line = glm_line.strip()
+        #If the glm input is NOT in the used ids names
+        #then write to the glm output
+        sys.stdout.write(glm_line+"\n")
+        res_ind = binary_search(used_ids,glm_line)
+        if res_ind == -1 or used_ids[res_ind] != glm_line:
+            glm_output.write(glm_line)
+
+glm_output.close()
+
+prefilter_name = os.path.join(OUTPUT_DIR,"GLM_classInput","prefilter_"+SPORK_STEM_NAME+"_1__output_FJ.txt")
+os.rename(glm_input_name,prefilter_name)
+os.rename(filtered_glm_outupt_name,glm_input_name)
+write_time("Filter out reads used to build junctions",start_time,timer_file_path)
+
 
 ###
 ####

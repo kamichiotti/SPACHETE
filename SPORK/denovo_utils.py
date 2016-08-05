@@ -1,5 +1,6 @@
 # General Imports
 import subprocess
+import itertools
 import time
 import sys
 import re
@@ -186,7 +187,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
 ########################
 # Runs bowtie on all of the possible splice sites of all possible junctions
 # Returns a dict keyed by jct_id and valued by a list of cut sites
-def find_splice_inds(denovo_junctions,constants_dict,r_ind=1):
+def find_splice_inds(denovo_junctions,constants_dict):
     """
     Goal: find where in the consensus sequence to make and upstream and downstream cut
     Arguments:
@@ -198,7 +199,7 @@ def find_splice_inds(denovo_junctions,constants_dict,r_ind=1):
         to allow for continuing with only jcts that had a splice site found
     """
     # Gather info from the constants dictionary
-    splice_finder_temp_name = constants_dict["out_dir"]+"R"+str(r_ind+1)+"_splice_finder_temp_"
+    splice_finder_temp_name = constants_dict["out_dir"]+"splice_finder_temp_"
     min_score = constants_dict["splice_finding_min_score"]
     max_mismatches = int(constants_dict["splice_finding_allowed_mismatches"])
     read_gap_score = constants_dict["read_gap_score"]
@@ -685,7 +686,7 @@ def identify_fusions(junctions,span_cutoff=1e6):
 #####################################
 # Currently keeps linear and non-linear separated even if they share a splice site
 # NOTE currently does not work
-def collapse_junctions(junctions):
+def old_collapse_junctions(junctions):
     """
     Goal: take the junctions and collapse ones which represent the same splice site
     Arguments:
@@ -872,6 +873,100 @@ def write_time(message,start_time,timer_file_path,append=True,uniform_len=70):
     timer_file.write(time_out_str)
     timer_file.close()
 
+##########################
+#   Collapse Junctions   #
+##########################
+def collapse_junctions(jcts,full_path_name,constants_dict):
+    """
+    Goal: take in the junctions and collapse ones at or near the same
+          splice sites
+    Arguments:
+        junctions is a list[Junction] object
+        full_path_name points to the the combined fastq file
+        constants dict is a dictionary of global constants
+
+    Returns:
+        a tuple with the first element as the singles "uncollapsed list"
+        and the second being the collapsed list of junctions list[Junction]
+    """
+    #Get the collapsing threshold (radius of donor and acceptor to collapse in)
+    collapse_thresh = constants_dict["collapse_thresh"]
+
+    #Separate the jcts by chromosome pairs to make later O(N^2) less painful
+    #so will have one entry for chr1:chr2, chr1:chr3 etc
+    #it will be combinations, not permutations (chr1:chr2 == chr2:chr1)
+    splices_by_chroms = {}
+    for jct in jcts:
+        chrom_1 = str(jct.upstream_sam.chromosome)
+        chrom_2 = str(jct.downstream_sam.chromosome)
+        if chrom_1+chrom_2 in splices_by_chroms:
+            splices_by_chroms[chrom_1+chrom_2].append(jct)
+        elif chrom_2+chrom_1 in splices_by_chroms:
+            splices_by_chroms[chrom_2+chrom_1].append(jct)
+        else:
+            splices_by_chroms[chrom_1+chrom_2] = [jct]
+
+    groupings = {}
+    for chroms in splices_by_chroms:
+        groupings[chroms] = []
+        for jct in splices_by_chroms[chroms]:
+            don = jct.upstream_sam.stop
+            acc = jct.downstream_sam.start
+            found_prev_group = False
+
+            #Only compare jct to other jcts if both
+            #don and acc are not None
+            if don and acc:
+                for prev_group in groupings[chroms]:
+                    for prev_jct in prev_group:
+                        prev_don = prev_jct.upstream_sam.stop
+                        prev_acc = prev_jct.downstream_sam.start
+                        #If any one of the acceptor/donors are None
+                        if not prev_don or not prev_acc:
+                            continue
+                        if abs(don-prev_don) <= collapse_thresh and abs(acc-prev_acc) < collapse_thresh:
+                            prev_group.append(jct)
+                            found_prev_group = True
+                            break
+
+                #If found a prev_group, don't need to look through
+                #other prev groups
+                if found_prev_group:
+                    break
+
+            #If it didn't find any of the prev_groups, start a new group
+            if not found_prev_group:
+                groupings[chroms].append([jct])
+
+
+    #NOTE start_ind is on the start, and stop_ind is one past the desired stop
+    #bin_pair_group_ranges.append([start_ind,stop_ind])
+    #NOTE I think this could be a fold operation
+    singles = []
+    bin_pairs = []
+    bin_pair_group_ranges = []
+    prev_stop = 0
+    for chroms in groupings:
+        for group in groupings[chroms]:
+            if len(group) <= 1:
+                singles += group
+            else:
+                group_bin_pairs = []
+                #NOTE THIS IS TEMPORARY PRINTOUT
+                sys.stdout.write("Found group:\n")
+                for member in group:
+                    group_bin_pairs += member.bin_pair_group
+                    #NOTE THIS IS TEMPORARY PRINTOUT
+                    sys.stdout.write(member.consensus+"\n")
+                bin_pairs += group_bin_pairs
+                bin_pair_group_ranges.append([prev_stop,prev_stop+len(group_bin_pairs)])
+                prev_stop += len(group_bin_pairs)
+               
+    #Make the call to rebuild collapsed junctions
+    collapsed_jcts = build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,constants_dict)
+
+    return ret_jcts,collapsed_jcts
+    
 
 ##########################
 #   Reverse Compliment   #

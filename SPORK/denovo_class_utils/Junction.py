@@ -36,7 +36,7 @@ class Junction(object):
         self.downstream_sam = SAMEntry()
 
 
-    #Use the sam's again to find the splice index in reference to the concensus
+    #Use the sam's to find the splice index in reference to the concensus
     def splice_ind(self):
         """
         Goal: Get the splice site in consensus coordinates [0,len(consensus)-1]
@@ -241,13 +241,18 @@ class Junction(object):
         start2 = self.downstream_sam.start
         strand1 = self.upstream_sam.strand
         strand2 = self.downstream_sam.strand
+        fusion = "fusion" if self.check_fusion() else "no_fusion"
 
         #Start building the fasta string
         fasta_str = ""
         fasta_str += ">"
         fasta_str += str(chrom1)+":"+str(genes1)+":"+str(start1)+":"+str(strand1)+"|"
         fasta_str += str(chrom2)+":"+str(genes2)+":"+str(start2)+":"+str(strand2)+"|"
-        fasta_str += "fusion\n" if self.check_fusion() else "no_fusion\n"
+        fasta_str += fusion
+        fasta_str += ",num="+str(len(self.bin_pair_group))
+        fasta_str += ",score="+str(self.score)
+        fasta_str += ",gap="+str(self.splice_gap())
+        fasta_str += "\n"
 
         # Add N padding to the consensus to get a uniform len
         full_consensus = None

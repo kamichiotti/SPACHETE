@@ -12,10 +12,18 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
     padded_seqs = []
     left_padded_seqs = []
     for mapped_read in mapped_reads:
-        full_seq = id_to_seq["@"+mapped_read.read_id.split("/")[0]]
+        id_key = mapped_read.read_id
+        id_key = id_key.replace("/5_prime","")
+        id_key = id_key.replace("/3_prime","")
+        id_key = id_key.replace("_"," ")
+        full_seq = id_to_seq["@"+id_key]
+        mapped_read.read_id = id_key
         left_padding = int(mapped_read.start%bin_size) if strand == "+" else int(bin_size-mapped_read.start%bin_size)
         left_padded_seq = " "*left_padding+full_seq
-        left_padded_seqs.append(left_padded_seq)
+
+        #Don't allow exact sequence duplicates
+        if left_padded_seq not in left_padded_seqs:
+            left_padded_seqs.append(left_padded_seq)
 
     #Add padding on the right sides so that every sequence is the same length
     #Handled the same for plus and minus strand
@@ -42,7 +50,7 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
             if base in base_dict:
                 counts[base_dict[base]] += 1
         total_bases = sum(counts)
-        if total_bases > min_bases_per_col:
+        if total_bases >= min_bases_per_col:
             num_possible_discrepancies += total_bases
             max_count = max(counts)
             num_discrepancies += total_bases-max_count
@@ -50,7 +58,8 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
             consensus += rev_base_dict[max_index]
         else: empty_spaces += 1
 
-    #The 0.75 is added because at worst, 75% (rounded down) of the total reads will not agree w/ the 'consensus'
+    #Give a terrible score if there are 0 possible discrepancies
+    #This arises most often when a junction only has one unique sequence
     if int(num_possible_discrepancies) <= 0:
         consensus_score = 999999
         sys.stderr.write("Null consensus:\n"+"\n".join(padded_seqs)+"\n")

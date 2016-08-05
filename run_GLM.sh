@@ -35,6 +35,8 @@ do
 reg_class_input=${file}
 done
 
+#RB this is not appending to FJ, just overwriting it
+#RB ends up storing the lowest alphabetic file
 for file in ${FJ_INPUTDIR}*${STEM}*output_FJ.txt
 do
 FJ_input=${file}
