@@ -174,6 +174,37 @@ def write_time(message,start_time,timer_file_path,append=True,uniform_len=70):
     timer_file.write(time_out_str)
     timer_file.close()
 
+#RB filter out used ids from glm class files
+def filter_glm_class_file(glm_input_name,used_ids_name,timer_file_path):
+    start_time = time.time()
+    filtered_glm_outupt_name = glm_input_name+".tmp"
+
+    sys.stdout.write("Starting filtering: "+glm_input_name+"\n")
+    glm_output = open(filtered_glm_outupt_name,"w")
+    with open(used_ids_name,"r") as used_ids_file:
+        used_ids = []
+        for used_id in used_ids_file:
+            clean_used_id = used_id.split(" ")[0][1:].strip()
+            used_ids.append(clean_used_id)
+        used_ids.sort()
+
+        for glm_line in open(glm_input_name,"r"):
+            glm_read_id = glm_line.split("\t")[0].strip()
+            #If the glm input is NOT in the used ids names
+            #then write to the glm output
+            res_ind = binary_search(used_ids,glm_read_id)
+            if res_ind == -1:
+                glm_output.write(glm_line.strip()+"\n")
+
+    glm_output.flush()
+    glm_output.close()
+
+    prefilter_name = glm_input_name+".prefilter"
+    os.rename(glm_input_name,prefilter_name)
+    os.rename(filtered_glm_outupt_name,glm_input_name)
+    write_time("Filter out reads used in: "+glm_input_name,start_time,timer_file_path)
+
+
 
 subprocess.check_call("rm -f {LOG_DIR}/*".format(LOG_DIR=LOG_DIR),shell=True)
 subprocess.check_call("rm -f {LOG_DIR}/MasterError.txt".format(LOG_DIR=LOG_DIR),shell=True)
@@ -204,8 +235,13 @@ NUM_FLANKING = "150"
 #This should be blocking
 start_time = time.time()
 SPORK_STEM_NAME = open(StemFile,"r").readline().strip()
-subprocess.call(["python","SPORK/denovo_pipeline_combined.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
+subprocess.call(["python","SPORK/SPORK_main.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
 write_time("Run spork",start_time,timer_file_path)
+
+###########!!!NOTE!!! Exiting right after spork for debugging
+#sys.exit(1)
+
+
 
 #Make the bowtie index building call on the spork fasta
 start_time = time.time()
@@ -732,35 +768,6 @@ for i in range(1,NumIndels + 1):
     checkProcesses(processes)
     write_time("Align linear indels "+str(i),start_time,timer_file_path)
 
-
-##Filter out reads used to build the SPORK junctions before they get
-##to the GLM.
-start_time = time.time()
-used_ids_name = os.path.join(OUTPUT_DIR,"spork_out","used_read_ids.txt")
-glm_input_name = os.path.join(OUTPUT_DIR,"GLM_classInput",SPORK_STEM_NAME+"_1__output_FJ.txt")
-filtered_glm_outupt_name = glm_input_name+".tmp"
-
-sys.stdout.write("Starting filtering\n")
-glm_output = open(filtered_glm_outupt_name,"w")
-with open(used_ids_name,"r") as used_ids_file:
-    used_ids = sorted(used_ids_file.readlines())
-    for glm_line in open(glm_input_name,"r"):
-        glm_line = glm_line.strip()
-        #If the glm input is NOT in the used ids names
-        #then write to the glm output
-        sys.stdout.write(glm_line+"\n")
-        res_ind = binary_search(used_ids,glm_line)
-        if res_ind == -1 or used_ids[res_ind] != glm_line:
-            glm_output.write(glm_line)
-
-glm_output.close()
-
-prefilter_name = os.path.join(OUTPUT_DIR,"GLM_classInput","prefilter_"+SPORK_STEM_NAME+"_1__output_FJ.txt")
-os.rename(glm_input_name,prefilter_name)
-os.rename(filtered_glm_outupt_name,glm_input_name)
-write_time("Filter out reads used to build junctions",start_time,timer_file_path)
-
-
 ###
 ####
 ######## MAKE REG AND FJ INDELS CLASS OUTPUT FILES ###########
@@ -786,6 +793,7 @@ for index in range(1,NUM_FILES + 1):
 checkProcesses(processes)
 write_time("RegIndelsClassID",start_time,timer_file_path)
 
+
 # FJ indels class output file
 ## This script calls FJIndelsClassID.sh
 ## This takes the FJdir/FarJunctionSecondary/AlignedIndels/<STEM>/All_<STEM>_1/2_FJindels.sam and identifies read partners.  The same criteria to identify read partners as FarJuncNaiveReport.sh are applied (see above).
@@ -804,6 +812,18 @@ for index in range(1,NUM_FILES + 1):
 checkProcesses(processes)
 write_time("FJIndelsClassID",start_time,timer_file_path)
 print("STATUS:FJ Indels Class Output")
+
+
+##Filter out reads used to build the SPORK junctions before they get to the GLM.
+used_ids_name = os.path.join(OUTPUT_DIR,"spork_out","used_read_ids.txt")
+glm_input_name = os.path.join(OUTPUT_DIR,"GLM_classInput",SPORK_STEM_NAME+"_1__output_FJ.txt")
+filter_glm_class_file(glm_input_name,used_ids_name,timer_file_path)
+
+glm_input_name = os.path.join(OUTPUT_DIR,"GLM_classInput",SPORK_STEM_NAME+"_output_FJIndels.txt")
+filter_glm_class_file(glm_input_name,used_ids_name,timer_file_path)
+
+glm_input_name = os.path.join(OUTPUT_DIR,"GLM_classInput",SPORK_STEM_NAME+"_temp_output_FJIndels.txt")
+filter_glm_class_file(glm_input_name,used_ids_name,timer_file_path)
 
 
 ###### RUN GLM ###########################

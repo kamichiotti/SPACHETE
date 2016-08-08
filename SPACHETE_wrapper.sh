@@ -31,8 +31,8 @@
 #############################
 #    CML UConn samples      #
 #############################
-#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_filtered"
+KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_filtered"
 
 #################################
 #    Normal breast samples      #
@@ -61,8 +61,8 @@
 ##############################
 #  Normal Genome Samples     #
 ##############################
-KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/normal_human_genome/ERR1549500"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome"
+#KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/normal_human_genome/ERR1549500"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome"
 
 
 

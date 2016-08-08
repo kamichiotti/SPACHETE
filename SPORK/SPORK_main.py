@@ -23,9 +23,9 @@ import os
 # Script specific Imports #
 ###########################
 self_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(self_path+"/denovo_class_utils/")
-from denovo_consensus_utils import *
-from denovo_utils import *
+sys.path.append(self_path+"/SPORK_classes/")
+from consensus_utils import *
+from SPORK_utils import *
 from Junction import Junction
 from BinPair import BinPair
 from GTFEntry import GTFEntry
@@ -140,7 +140,7 @@ constants_dict = {"parent_dir":parent_dir,"dataset_name":dataset_name,"mode":mod
                   "consensus_score_cutoff":consensus_score_cutoff,"min_score":min_score,"read_gap_score":read_gap_score,
                   "splice_finding_min_score":splice_finding_min_score,"read_gap_score":read_gap_score,"min_bases_per_col":min_bases_per_col,
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
-                  "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,
+                  "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,"use_prior":use_prior,
                   "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf":gtf,"collapse_thresh":collapse_thresh}
 
 ###################################
@@ -387,24 +387,42 @@ for file_name in file_names:
                     used_read_id = bin_pair.five_prime_SAM.read_id
                     if " R1" in used_read_id:
                         trimmed_read_id = used_read_id.replace(" R1","")
-                        used_read_ids.write("@"+trimmed_read_id+"\n")
+                    if " R2" in used_read_id:
+                        trimmed_read_id = used_read_id.replace(" R2","")                   
+                    used_read_ids.write("@"+trimmed_read_id+"\n")
 
         # Find the splice indicies of the junctions
         start_find_splice_inds = time.time()
         denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
-        write_time("-Time to find splice indicies ",start_find_splice_inds,timer_file_path)
-
-        # Collapse the junctions that have the same splice site
-        start_collapse_junctions = time.time()
-        singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict)
-        denovo_junctions = singular_jcts+collapsed_jcts
-        write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
+        write_time("-Time to find splice indices ",start_find_splice_inds,timer_file_path)
 
         # Get GTF information for the identified denovo_junctions
         start_get_jct_gtf_info = time.time()
         get_jct_gtf_info(denovo_junctions,gtfs)
         write_time("Time to get jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
         print len(denovo_junctions)
+
+        """
+        #########################################################
+        #    Write out the denovo_junctions before collapsing   #
+        #########################################################
+        machete_style_name = out_dir+"pre_collapse_novel_junctions_machete.fasta"
+        machete_style_file = open(machete_style_name, "w")
+        # Loop through the denovo junctions writing them where necessary
+        for denovo_junction in denovo_junctions:
+            jct_ind = denovo_junctions.index(denovo_junction)
+            machete_style_file.write(denovo_junction.fasta_MACHETE())
+        # Close the three output files
+        machete_style_file.close()
+ 
+
+        # Collapse the junctions that have the same splice site
+        start_collapse_junctions = time.time()
+        singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict)
+        sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
+        denovo_junctions = singular_jcts+collapsed_jcts
+        write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
+        """
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()
@@ -445,5 +463,6 @@ for file_name in file_names:
         
            
 write_time("Entire time",start_entire_time,timer_file_path)
+
 
 

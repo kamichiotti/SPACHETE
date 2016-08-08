@@ -1,3 +1,5 @@
+import sys
+
 #Mapped Read class
 class SAMEntry(object):
     __slots__ = ["read_id","strand","chromosome","start","stop","seq","seq_quality","exists",

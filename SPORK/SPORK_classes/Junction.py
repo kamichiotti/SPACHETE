@@ -374,6 +374,26 @@ class Junction(object):
         fasta_str += str(full_consensus)+"\n"
         return fasta_str
 
+    #Give back the R1 readIDs used to make this junction
+    def get_read_ids(self):
+        """
+        Goal: return a list of the read ids (strings) that made this junction
+        Arguments:
+            none
+        Returns:
+            a list[string] of the read-ids for this junction
+        """
+        read_ids = []
+        for bin_pair in self.bin_pair_group:
+            upstream_id = bin_pair.five_prime_SAM.read_id.replace("/5_prime","")
+            downstream_id = bin_pair.five_prime_SAM.read_id.replace("/3_prime","")
+            if upstream_id == downstream_id:
+                read_ids.append(upstream_id)
+            else:
+                sys.stderr.write("ERROR, nonmatching ids in jct: ["+upstream_id+"] vs ["+downstream_id+"]\n")
+                sys.exit(1)
+
+        return read_ids
 
     #More human readable format
     def __str__(self):

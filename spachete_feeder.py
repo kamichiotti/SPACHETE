@@ -62,13 +62,13 @@ else:
 ##########################
 #  Specify stems to run  #
 ##########################
-#this is optional, can comment it out
+include_stems = None
 
 #include_stems = ["Fetal_Intestine_360_AGTTCC_L005",
 #                 "Fetal_Intestine_397_TGACCA_L005",
 #                 "Fetal_Intestine_408_ACAGTG_L006"]
 
-#include_stems = ["SRR3192411"]
+include_stems = ["SRR3192415"]
 
 #include_stems = ["Fetal_Heart_405_CAGATC_L007"]
 
@@ -82,10 +82,11 @@ with open(FullStemFile,"r") as stem_file:
     for stem in sorted(stems):
         stem = stem.strip()
         print stem
-        #Uncomment to skip some of the stems as defined in the include list above
-        #if stem not in include_stems:
-        #    print stem+" not in include stems, skipping "+stem
-        #    continue
+        #If include_stems is not None then
+        #skip all the stems not in the include stems list
+        if include_stems and stem not in include_stems:
+            print stem+" not in include stems, skipping "+stem
+            continue
 
         OUTPUT_DIR = args.OUTPUT_DIR
         OUTPUT_DIR += "/"+stem
@@ -165,7 +166,7 @@ with open(FullStemFile,"r") as stem_file:
 
         #Sending jobs to the SLURM scheduler
         #NOTE I'm giving 40GBs to each job, which might not be enough
-        subprocess.call(["sbatch","-p","owners","--mem=40000","--time=24:00:00",
+        subprocess.call(["sbatch","-p","owners","--mem=40000","--time=8:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
 

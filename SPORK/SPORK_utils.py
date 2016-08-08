@@ -3,11 +3,12 @@ import subprocess
 import itertools
 import time
 import sys
+import os
 import re
 
 # Specific Imports
-sys.path.append('./denovo_class_utils/')
-from denovo_consensus_utils import *
+sys.path.append('./SPORK_classes/')
+from consensus_utils import *
 from Junction import Junction
 from BinPair import BinPair
 from GTFEntry import GTFEntry
@@ -207,54 +208,59 @@ def find_splice_inds(denovo_junctions,constants_dict):
     allowed_mappings = constants_dict["splice_finding_allowed_mappings"]
     num_threads = constants_dict["num_threads"]
     reference = constants_dict["reference"]
+    use_prior = constants_dict["use_prior"]
 
     # Handle temporary files
+    five_prime_mapped_name = splice_finder_temp_name+"5_prime.sam"
+    three_prime_mapped_name = splice_finder_temp_name+"3_prime.sam"
     five_prime_fa_file = splice_finder_temp_name+"5_prime.fa"
     three_prime_fa_file = splice_finder_temp_name+"3_prime.fa"
     five_temp_file = open(five_prime_fa_file,"w")
     three_temp_file = open(three_prime_fa_file,"w")
 
-    # Write out all the possible splice sites for every jct out to a 5' and 3' file
-    for jct_ind in range(len(denovo_junctions)):
-        sys.stdout.flush()
-        junction = denovo_junctions[jct_ind]
-        cons_len = len(junction.consensus)
-        splice_map_size = len(junction.consensus)/3
+    # Do all the aligning work only if there are no mapped files already
+    if use_prior and os.path.isfile(five_prime_mapped_name) and os.path.isfile(three_prime_mapped_name):
+        write_time("--Using existing files in splice ind id",time.time(),constants_dict["timer_file_path"])
+    else:
+        # Write out all the possible splice sites for every jct out to a 5' and 3' file
+        for jct_ind in range(len(denovo_junctions)):
+            sys.stdout.flush()
+            junction = denovo_junctions[jct_ind]
+            cons_len = len(junction.consensus)
+            splice_map_size = len(junction.consensus)/3
 
-        five_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(0,cons_len-2*splice_map_size+1)]
-        three_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(splice_map_size,cons_len-splice_map_size+1)]
+            five_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(0,cons_len-2*splice_map_size+1)]
+            three_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(splice_map_size,cons_len-splice_map_size+1)]
 
-        five_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"+five_prime_list[ind] for ind in range(len(five_prime_list))]
-        three_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"+three_prime_list[ind] for ind in range(len(three_prime_list))]
+            five_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"+five_prime_list[ind] for ind in range(len(five_prime_list))]
+            three_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"+three_prime_list[ind] for ind in range(len(three_prime_list))]
 
-        five_temp_file.write("\n".join(five_prime_fa_list)+"\n")
-        three_temp_file.write("\n".join(three_prime_fa_list)+"\n")
+            five_temp_file.write("\n".join(five_prime_fa_list)+"\n")
+            three_temp_file.write("\n".join(three_prime_fa_list)+"\n")
 
-    # Don't forget to close the files :)
-    five_temp_file.close()
-    three_temp_file.close()
-   
-    # Map the temp files above to the reference and save in temp sam files
-    # Need to specify the -f flag because the inputs are fasta files
-    five_prime_mapped_name = splice_finder_temp_name+"5_prime.sam"
-    three_prime_mapped_name = splice_finder_temp_name+"3_prime.sam"
-    with open(five_prime_mapped_name,"w") as five_prime_mapped:
-        subprocess.call(
-            ["bowtie2", "-f", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
-             "-x", reference, five_prime_fa_file], stdout=five_prime_mapped)
-    with open(three_prime_mapped_name,"w") as three_prime_mapped:
-        subprocess.call(
-            ["bowtie2", "-f", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
-             "-x", reference, three_prime_fa_file], stdout=three_prime_mapped)
+        # Don't forget to close the files :)
+        five_temp_file.close()
+        three_temp_file.close()
+       
+        # Map the temp files above to the reference and save in temp sam files
+        # Need to specify the -f flag because the inputs are fasta files
+        with open(five_prime_mapped_name,"w") as five_prime_mapped:
+            subprocess.call(
+                ["bowtie2", "-f", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
+                 "-x", reference, five_prime_fa_file], stdout=five_prime_mapped)
+        with open(three_prime_mapped_name,"w") as three_prime_mapped:
+            subprocess.call(
+                ["bowtie2", "-f", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
+                 "-x", reference, three_prime_fa_file], stdout=three_prime_mapped)
 
-    # Sort the temp output files after removing the header lines
-    p1 = subprocess.Popen(["grep","-v","@",five_prime_mapped_name],stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(["sort","-o",five_prime_mapped_name],stdin=p1.stdout)
-    p2.communicate()
+        # Sort the temp output files after removing the header lines
+        p1 = subprocess.Popen(["grep","-v","@",five_prime_mapped_name],stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(["sort","-o",five_prime_mapped_name],stdin=p1.stdout)
+        p2.communicate()
 
-    p3 = subprocess.Popen(["grep","-v","@",three_prime_mapped_name],stdout=subprocess.PIPE)
-    p4 = subprocess.Popen(["sort","-o",three_prime_mapped_name],stdin=p3.stdout)
-    p4.communicate()
+        p3 = subprocess.Popen(["grep","-v","@",three_prime_mapped_name],stdout=subprocess.PIPE)
+        p4 = subprocess.Popen(["sort","-o",three_prime_mapped_name],stdin=p3.stdout)
+        p4.communicate()
 
     #Open the mapped, sorted, headerless files
     five_prime_sam_file = open(five_prime_mapped_name,"r")
@@ -924,48 +930,41 @@ def collapse_junctions(jcts,full_path_name,constants_dict):
                         #If any one of the acceptor/donors are None
                         if not prev_don or not prev_acc:
                             continue
-                        if abs(don-prev_don) <= collapse_thresh and abs(acc-prev_acc) < collapse_thresh:
+                        if abs(don-prev_don) <= collapse_thresh and abs(acc-prev_acc) <= collapse_thresh:
+                            sys.stderr.write("Found match for:\n")
+                            sys.stderr.write(jct.verbose_fasta_string())
                             prev_group.append(jct)
                             found_prev_group = True
                             break
 
-                #If found a prev_group, don't need to look through
-                #other prev groups
-                if found_prev_group:
-                    break
+                    #If found a prev_group, don't need to look through
+                    #other prev groups
+                    if found_prev_group:
+                        break
 
             #If it didn't find any of the prev_groups, start a new group
             if not found_prev_group:
                 groupings[chroms].append([jct])
 
 
-    #NOTE start_ind is on the start, and stop_ind is one past the desired stop
-    #bin_pair_group_ranges.append([start_ind,stop_ind])
-    #NOTE I think this could be a fold operation
+    #Separate singles from groups
     singles = []
-    bin_pairs = []
-    bin_pair_group_ranges = []
-    prev_stop = 0
+    groups = []
+    sys.stdout.write("STARTING REP PRINT\n")
     for chroms in groupings:
         for group in groupings[chroms]:
             if len(group) <= 1:
                 singles += group
             else:
-                group_bin_pairs = []
-                #NOTE THIS IS TEMPORARY PRINTOUT
-                sys.stdout.write("Found group:\n")
-                for member in group:
-                    group_bin_pairs += member.bin_pair_group
-                    #NOTE THIS IS TEMPORARY PRINTOUT
-                    sys.stdout.write(member.consensus+"\n")
-                bin_pairs += group_bin_pairs
-                bin_pair_group_ranges.append([prev_stop,prev_stop+len(group_bin_pairs)])
-                prev_stop += len(group_bin_pairs)
-               
-    #Make the call to rebuild collapsed junctions
-    collapsed_jcts = build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,constants_dict)
+                sys.stderr.write("Group info:\n")
+                sys.stderr.write("".join([m.verbose_fasta_string() for m in group]))
+                sys.stderr.write("\n")
+                counts = [len(member.bin_pair_group) for member in group]
+                max_ind = counts.index(max(counts))
+                sys.stdout.write(group[max_ind].verbose_fasta_string()+"\n")
+                groups.append(group[max_ind])
 
-    return ret_jcts,collapsed_jcts
+    return singles,groups
     
 
 ##########################
