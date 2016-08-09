@@ -226,16 +226,28 @@ NUM_FILES = len(open(StemFile,"r").readlines())
 print("NUM_FILES: "+str(NUM_FILES))
 
 # Run SPORK
-ALIGN_PARDIR = "/".join(CIRCPIPE_DIR.split("/")[:-1])+"/"
-DATASET_NAME = CIRCPIPE_DIR.split("/")[-1]
-MODE = "complete"
-NTRIM = "13"
-DENOVOCIRC = "1"
-NUM_FLANKING = "150"
+#ALIGN_PARDIR = "/".join(CIRCPIPE_DIR.split("/")[:-1])+"/"
+#DATASET_NAME = CIRCPIPE_DIR.split("/")[-1]
+#MODE = "complete"
+#NTRIM = "13"
+#DENOVOCIRC = "1"
+#NUM_FLANKING = "150"
 #This should be blocking
 start_time = time.time()
 SPORK_STEM_NAME = open(StemFile,"r").readline().strip()
-subprocess.call(["python","SPORK/SPORK_main.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
+SPORK_OPTIONS = ""
+SPORK_OPTIONS += "--input-dir "+CIRCPIPE_DIR+" "
+SPORK_OPTIONS += "--output-dir "+OUTPUT_DIR+" "
+SPORK_OPTIONS += "--stem-name "+SPORK_STEM_NAME+" "
+#subprocess.call(["python","SPORK/SPORK_main.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
+spork_process = subprocess.Popen(["python","SPORK/SPORK_main.py",
+                                    "--input-dir",CIRCPIPE_DIR,
+                                    "--output-dir",OUTPUT_DIR,
+                                    "--stem-name",SPORK_STEM_NAME],
+                                    stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+spork_out,spork_err = spork_process.communicate()
+sys.stdout.write(spork_out)
+sys.stderr.write(spork_err)
 write_time("Run spork",start_time,timer_file_path)
 
 ###########!!!NOTE!!! Exiting right after spork for debugging

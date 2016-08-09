@@ -7,7 +7,9 @@ import os
 import re
 
 # Specific Imports
-sys.path.append('./SPORK_classes/')
+self_path = os.path.dirname(os.path.abspath(__file__))
+classes_path = os.path.join(self_path,"SPORK_classes")
+sys.path.append(classes_path)
 from consensus_utils import *
 from Junction import Junction
 from BinPair import BinPair
@@ -200,7 +202,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
         to allow for continuing with only jcts that had a splice site found
     """
     # Gather info from the constants dictionary
-    splice_finder_temp_name = constants_dict["out_dir"]+"splice_finder_temp_"
+    splice_finder_temp_name = os.path.join(constants_dict["output_dir"],"splice_finder_temp_")
     min_score = constants_dict["splice_finding_min_score"]
     max_mismatches = int(constants_dict["splice_finding_allowed_mismatches"])
     read_gap_score = constants_dict["read_gap_score"]
@@ -882,7 +884,7 @@ def write_time(message,start_time,timer_file_path,append=True,uniform_len=70):
 ##########################
 #   Collapse Junctions   #
 ##########################
-def collapse_junctions(jcts,full_path_name,constants_dict):
+def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=None):
     """
     Goal: take in the junctions and collapse ones at or near the same
           splice sites
@@ -950,19 +952,25 @@ def collapse_junctions(jcts,full_path_name,constants_dict):
     #Separate singles from groups
     singles = []
     groups = []
-    sys.stdout.write("STARTING REP PRINT\n")
+    group_out_file = None
+    if group_out_file_name:
+        group_out_file = open(group_out_file_name,"w")
+
     for chroms in groupings:
         for group in groupings[chroms]:
             if len(group) <= 1:
                 singles += group
             else:
-                sys.stderr.write("Group info:\n")
-                sys.stderr.write("".join([m.verbose_fasta_string() for m in group]))
-                sys.stderr.write("\n")
+                if group_out_file_name:
+                    group_out_file.write("Group info:\n")
+                    group_out_file.write("".join([m.verbose_fasta_string() for m in group])+"\n")
                 counts = [len(member.bin_pair_group) for member in group]
                 max_ind = counts.index(max(counts))
                 sys.stdout.write(group[max_ind].verbose_fasta_string()+"\n")
                 groups.append(group[max_ind])
+
+    if group_out_file_name:
+        group_out_file.close()
 
     return singles,groups
     

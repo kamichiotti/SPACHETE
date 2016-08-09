@@ -25,6 +25,7 @@ parser.add_argument("--numIndels",dest="NumIndels",type=int,default=5,help="Defa
 parser.add_argument("--hg19Exons",required=True,dest="EXONS",help="Path to HG19Exons. Formerly called PICKLEDIR.")
 parser.add_argument("--reg-indel-indices",required=True,dest="REG_INDEL_INDICES",help="Path to files with names like hg19_junctions_reg_indels_1.1.bt2l,hg19_junctions_reg_indels_2.rev.1.bt2l ... These are sometimes in a folder called IndelIndices.")
 parser.add_argument("--circref-dir",required=True,dest="CIRCREF",help="Path to reference libraries output by KNIFE - directory that contains hg19_genome, hg19_transcriptome, hg19_junctions_reg and hg19_junctions_scrambled bowtie indices.")
+parser.add_argument("--stem-include-list",required=False,dest="STEM_INCLUDE_LIST",help="If only want to run some of the stems then define this, otherwise will run all the stems")
 #parser.add_argument("REFGENOME",help="HG19 vs HG38;could upgrade to HG38.")
 
 
@@ -62,15 +63,10 @@ else:
 ##########################
 #  Specify stems to run  #
 ##########################
-include_stems = None
+include_stems = args.STEM_INCLUDE_LIST
 
-#include_stems = ["Fetal_Intestine_360_AGTTCC_L005",
-#                 "Fetal_Intestine_397_TGACCA_L005",
-#                 "Fetal_Intestine_408_ACAGTG_L006"]
-
-include_stems = ["SRR3192415"]
-
-#include_stems = ["Fetal_Heart_405_CAGATC_L007"]
+if include_stems:
+    include_stems = include_stems.split(",")
 
 
 ##########################################################

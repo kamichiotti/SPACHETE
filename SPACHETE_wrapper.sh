@@ -32,7 +32,8 @@
 #    CML UConn samples      #
 #############################
 KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_filtered"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192415" "SRR3192413")
 
 #################################
 #    Normal breast samples      #
@@ -80,7 +81,6 @@ EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
 INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
 CIRC_REF="/share/PI/horence/circularRNApipeline_Cluster/index"
 
-
 #Build up the OPTIONS string
 OPTIONS=""
 OPTIONS="$OPTIONS --circpipe-dir $KNIFE_DIR"
@@ -88,7 +88,14 @@ OPTIONS="$OPTIONS --output-dir $OUT_DIR"
 OPTIONS="$OPTIONS --hg19Exons $EXONS_DIR"
 OPTIONS="$OPTIONS --reg-indel-indices $INDEL_INDICES"
 OPTIONS="$OPTIONS --circref-dir $CIRC_REF"
+if [ "$STEM_INCLUDE_ONLY_LIST" -a ${#STEM_INCLUDE_ONLY_LIST[@]} -gt 0 ]
+then
+    INCLUDE_LIST=$(printf ",%s" "${STEM_INCLUDE_ONLY_LIST[@]}")
+    INCLUDE_LIST=${INCLUDE_LIST:1}
+    OPTIONS="$OPTIONS --stem-include-list $INCLUDE_LIST"
+fi
 
-python spachete_feeder.py $OPTIONS 1> o.txt 2> o.err
+
+python spachete_feeder.py $OPTIONS 1> out_spachete_feeder.txt 2> out_spachete_feeder.err
 
 

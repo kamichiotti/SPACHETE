@@ -15,6 +15,7 @@
 # General Imports #
 ###################
 import subprocess
+import argparse
 import time
 import sys
 import os
@@ -23,7 +24,8 @@ import os
 # Script specific Imports #
 ###########################
 self_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(self_path+"/SPORK_classes/")
+classes_path = os.path.join(self_path,"SPORK_classes")
+sys.path.append(classes_path)
 from consensus_utils import *
 from SPORK_utils import *
 from Junction import Junction
@@ -32,42 +34,42 @@ from GTFEntry import GTFEntry
 from SAMEntry import SAMEntry
 from FastQEntry import FastQEntry
 
-##########################
-# Command line arguments #
-##########################
-# Arguments from denovo_scripts.bash
-# sys.argv[0] is this program's name
-# sys.argv[1] is the align_parent_directory
-# sys.argv[2] is the dataset name
-# sys.argv[3] is the mode
-# sys.argv[4] is the seq len on each side of the splice site in denovo jcts
-# sys.argv[5] is the ntrim
-# sys.argv[6] is the circle prefs (0 is linear and circular, 1 is circular only)
-# sys.argv[7] is optionally the output directory (for SPACHETE)
-# sys.argv[8] is optionally the stem name (for SPACHETE)
+###########################
+#  Parse Input Arguments  #
+###########################
+arg_description = "Required Args: --input-dir, --output-dir"
+arg_description += "\n"+"Optional Args: --stem-name, --flank-len, --mode"
 
-# NOTE currently requires all args and has no defaults
-# Checking for the correct number of arguments
-if len(sys.argv) < 7:
-    sys.stderr.write("Not enough arguments passed to main denovo python file (need 6)")
-    sys.stderr.write("\tNumber of arguments passed: "+str(len(sys.argv)-1))
-    sys.stderr.write("\tExample call: python denovo_pipeline.py $ALIGN_PARDIR $DATASET_NAME $MODE $NUM_FLANKING $NTRIM $DENOVOCIRC")
+parser = argparse.ArgumentParser(description=arg_description)
+parser.add_argument("--input-dir",required=True,dest="input_dir",help="Directory containing KNIFE produced orig directory " \
+                    "(i.e. '/scratch/PI/horence/rob/parent_dirs/fetal_lungs/fetal_lung_01')")
+parser.add_argument("--output-dir",required=True,dest="output_dir",help="Output directory for resuts " \
+                    "(i.e. '/scratch/PI/horence/rob/spachete_outputs/normal_fetal')")
+parser.add_argument("--stem-name",required=False,dest="stem_name",help="Stem name for SPORK use in SPACHETE " \
+                    "to restrict SPORK from working on all the R1 files (i.e. 'SRR3192409')")
+parser.add_argument("--flank-len",required=False,dest="flank_len",help="Flanking length on either side of the junction " \
+                    "splice site. For example a flank len of 150 results in 300bp long junctions reported.",type=int)
+parser.add_argument("--mode",required=False,dest="mode",help="Mode is the reference to use to align to, note that the proper " \
+                    "bowtie2 indices and gtf file must exist in the indices folder. Defaults to hg19 (human genome)")
+
+args = parser.parse_args()
+input_dir = args.input_dir
+output_dir = os.path.join(args.output_dir,"spork_out")
+stem_name = args.stem_name
+splice_flank_len = args.flank_len
+mode = args.mode
+
+#Check if there is an orig in the right spot
+orig_dir = os.path.join(input_dir,"orig")
+if not os.path.exists(orig_dir):
+    sys.stderr.write("ERROR: No orig directory found in --input-dir\n")
     sys.exit(1)
 
-# Assigning arguments to their correct variables
-parent_dir = sys.argv[1]
-dataset_name = sys.argv[2]
-mode = sys.argv[3]                      #NOTE only allows hg19 use and any mode will default to hg19
-splice_flank_len = sys.argv[4]
-ntrim = sys.argv[5]                     #NOTE not currently used
-circle_prfs = sys.argv[6]               #NOTE not currently used
-out_dir = "/scratch/PI/horence/rob/spork_outputs/"+dataset_name+"/"
-if len(sys.argv) >= 8:
-    out_dir = sys.argv[7]+"/spork_out/"
-
-stem_name = None
-if len(sys.argv) >= 9:
-    stem_name = sys.argv[8]
+#Set defaults if not given
+if not splice_flank_len:
+    splice_flank_len = 150
+if not mode:
+    mode = "hg19"
 
 #############
 # Constants #
@@ -87,7 +89,7 @@ splice_finding_allowed_mappings = "1"   #just making this adjustable, probably w
 splice_finding_allowed_mismatches = "1" #used to find high quality splice sites
 num_threads = "8"                       #threads to use in each Bowtie2 call
 use_prior = True                        #if set to true will use previously made files if available
-timer_file_path = out_dir+"timed_events.txt"
+timer_file_path = os.path.join(output_dir,"timed_events.txt")
 start_entire_time = time.time()
 
 ########################################
@@ -98,7 +100,7 @@ reference, gtf = get_reference_and_gtf_from_mode(mode)
 
 # Loop through the directory to use only R1 fastq files
 # NOTE maybe move this to the utils script
-unaligned_path = parent_dir + dataset_name + "/orig/unaligned/forDenovoIndex"
+unaligned_path = os.path.join(orig_dir,"unaligned","forDenovoIndex")
 all_file_names = os.listdir(unaligned_path)
 file_names = []
 R1_patterns = []
@@ -135,8 +137,8 @@ for file_name in all_file_names:
 
 # Making a dict that stores the input and constant values to make argument passing easier
 # This is just a hash that stores the constants set above to allow them easy to pass
-constants_dict = {"parent_dir":parent_dir,"dataset_name":dataset_name,"mode":mode,"splice_flank_len":splice_flank_len,
-                  "ntrim":ntrim,"circle_prfs":circle_prfs,"bin_size":bin_size,"group_member_cutoff":group_member_cutoff,
+# Probably sloppy code
+constants_dict = {"input_dir":input_dir,"mode":mode,"splice_flank_len":splice_flank_len,"bin_size":bin_size,"group_member_cutoff":group_member_cutoff,
                   "consensus_score_cutoff":consensus_score_cutoff,"min_score":min_score,"read_gap_score":read_gap_score,
                   "splice_finding_min_score":splice_finding_min_score,"read_gap_score":read_gap_score,"min_bases_per_col":min_bases_per_col,
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
@@ -147,21 +149,21 @@ constants_dict = {"parent_dir":parent_dir,"dataset_name":dataset_name,"mode":mod
 # Loop through each R1 input file #
 ###################################
 for file_name in file_names:
-    # Create out_dir specific for each file_name
+    # Create output_dir specific for each file_name
     start_full_file_time = time.time()
-    if not os.path.isdir(out_dir):
-        os.mkdir(out_dir)
-    #out_dir += "spork_"+file_name.split(".")[0]+"/"
-    #if not os.path.isdir(out_dir):
-    #    os.mkdir(out_dir)
-    constants_dict["out_dir"] = out_dir
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+    #output_dir += "spork_"+file_name.split(".")[0]+"/"
+    #if not os.path.isdir(output_dir):
+    #    os.mkdir(output_dir)
+    constants_dict["output_dir"] = output_dir
     
     # Get the full path of the input fq reads file
     # Also setup the timer file to see how long each portion of SPORK takes
-    full_path = unaligned_path+"/"+file_name
-    timer_file_path = out_dir+"timed_events.txt"
+    full_path = os.path.join(unaligned_path,file_name)
+    timer_file_path = os.path.join(output_dir,"timed_events.txt")
     constants_dict["timer_file_path"] = timer_file_path
-    genome_sam_dir = parent_dir+dataset_name+"/orig/genome/"
+    genome_sam_dir = os.path.join(orig_dir,"genome/")
     constants_dict["genome_sam_dir"] = genome_sam_dir
 
     # Identify whether there is an R2 present in the same directory as the R1
@@ -184,53 +186,15 @@ for file_name in file_names:
 
     # Create file locations for fq files w/out spaces in headers
     R1_file_name = file_name
-    R1_file_path = out_dir+R1_file_name
+    R1_file_path = os.path.join(output_dir,R1_file_name)
     R2_file_name = R1_file_name.split(R1_pattern)[0]+R2_pattern+R1_file_name.split(R1_pattern)[1]
-    R2_file_path = out_dir+R2_file_name
+    R2_file_path = os.path.join(output_dir,R2_file_name)
     full_paths_out = [R1_file_path,R2_file_path]
     R1_R2_names = [R1_file_name,R2_file_name]
 
-    """
-    # Remove spaces from the header lines of the fq file (also remove the last split ind)
-    # NOTE creates a no_spaces version of each file removing spaces in header lines
-    # NOTE also removes the last "/" and everything to the right
-    # NOTE this should be moved to denovo utils
-    for file_ind in range(len(full_paths_in)):
-        file_path_in = full_paths_in[file_ind]
-        file_path_out = full_paths_out[file_ind]
-        f_name = file_path_in.split("/")[-1]
-        start_remove_spaces = time.time()
-        with open(file_path_in,"r") as fq_read_file:
-            with open(file_path_out,"w") as fq_write_file:
-                fq_line = fq_read_file.readline()
-                num_reads = 0
-                while fq_line:
-                    # Remove spaces and things to the right of the last space
-                    num_reads += 1
-                    split_fq_line = fq_line.split(" ")
-                    if len(split_fq_line) > 1:
-                        fq_line = "_".join(split_fq_line[:-1])+"\n"
-                    else:
-                        fq_line = split_fq_line[0]
-
-                    # Remove forward slashes and things to to right of the last "/"
-                    split_fq_line = fq_line.split("/")
-                    if len(split_fq_line) > 1:
-                        fq_line = "-".join(split_fq_line[:-1])+"\n"
-                    else:
-                        fq_line = split_fq_line[0]
-
-                    fq_write_file.write(fq_line.strip()+"_R"+str(file_ind+1)+"\n")    #Write out the header line
-                    fq_write_file.write(fq_read_file.readline()) #Skip the seq line
-                    fq_write_file.write(fq_read_file.readline()) #Skip the + line
-                    fq_write_file.write(fq_read_file.readline()) #Skip the quality line
-                    fq_line = fq_read_file.readline() #Get to the next header line
-        write_time("Time to remove spaces "+f_name,start_remove_spaces,timer_file_path)
-        write_time("--> Had "+str(num_reads)+" reads",start_remove_spaces,timer_file_path)
-    """
-
-    #Combine the R1 and R2 fastqs
-    combined_out_name = out_dir+"combined_reads.fq"
+    #Combine the R1 and R2 fastqs adding R1 and R1 to the headers
+    #to disambiguate in case of identical matching
+    combined_out_name = os.path.join(output_dir,"combined_reads.fq")
     with open(combined_out_name,"w") as combined_out:
         if len(full_paths_in) >= 1:
             with open(full_paths_in[0],"r") as R1_in_file:
@@ -258,8 +222,8 @@ for file_name in file_names:
     start_split_reads = time.time()
     R_file_path = combined_out_name
     R_file_name = "combined"
-    five_prime_fq_name = out_dir + "5prime_" + R_file_name.split(".")[0] + ".fq"
-    three_prime_fq_name = out_dir + "3prime_" + R_file_name.split(".")[0] + ".fq"
+    five_prime_fq_name = os.path.join(output_dir,"5prime_"+R_file_name.split(".")[0]+".fq")
+    three_prime_fq_name = os.path.join(output_dir,"3prime_"+R_file_name.split(".")[0]+".fq")
     if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name):
         write_time("Using previous split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
     else:
@@ -281,8 +245,8 @@ for file_name in file_names:
     # Map the 5' and 3' split files to the reference to generate the sam files
     # NOTE this can take a very long time for large R1 files
     start_split_mapping = time.time()
-    five_prime_mapped_name = five_prime_fq_name.split(".")[0] + ".sam"
-    three_prime_mapped_name = three_prime_fq_name.split(".")[0] + ".sam"
+    five_prime_mapped_name = five_prime_fq_name.split(".")[0]+".sam"
+    three_prime_mapped_name = three_prime_fq_name.split(".")[0]+".sam"
     if use_prior and os.path.isfile(five_prime_mapped_name) and os.path.isfile(three_prime_mapped_name):
         write_time("Using previous split unaligned reads "+R_file_name,start_split_mapping,timer_file_path)
     else:
@@ -291,12 +255,12 @@ for file_name in file_names:
         start_split_mapping = time.time()
         subprocess.call(
             ["bowtie2", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
-             "--un", out_dir + "unaligned_5prime_" + R_file_name, "-x", reference, five_prime_fq_name], stdout=five_prime_mapped)
+             "--un", os.path.join(output_dir,"unaligned_5prime_"+R_file_name+".fq"), "-x", reference, five_prime_fq_name], stdout=five_prime_mapped)
         write_time("Time to map split unaligned reads 5'"+R_file_name,start_split_mapping,timer_file_path)
         start_split_mapping = time.time()
         subprocess.call(
             ["bowtie2", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
-             "--un", out_dir + "unaligned_3prime_" + R_file_name, "-x", reference, three_prime_fq_name], stdout=three_prime_mapped)
+             "--un", os.path.join(output_dir,"unaligned_3prime_"+R_file_name+".fq"), "-x", reference, three_prime_fq_name], stdout=three_prime_mapped)
         write_time("Time to map split unaligned reads 3'"+R_file_name,start_split_mapping,timer_file_path)
         five_prime_mapped.close()
         three_prime_mapped.close()
@@ -312,7 +276,7 @@ for file_name in file_names:
     # [5] Collapse the denovo jcts
     # [6] Get GTF annotation data for each jct
     # [7] Write out the denovo jcts
-    fasta_for_bowtie_index_name = out_dir+"novel_junctions.fasta"
+    fasta_for_bowtie_index_name = os.path.join(output_dir,"novel_junctions.fasta")
     gtfs = generate_gtfs(gtf)
 
     if use_prior and os.path.isfile(fasta_for_bowtie_index_name):
@@ -362,7 +326,7 @@ for file_name in file_names:
         bin_pairs.sort()
 
         # Save the bin_pairs to a file to see how they look
-        bin_pair_out_file_name = out_dir+"bin_pairs.txt"
+        bin_pair_out_file_name = os.path.join(output_dir,"bin_pairs.txt")
         with open(bin_pair_out_file_name, "w") as f:
             for bin_pair in bin_pairs:
                 f.write(str(bin_pair))
@@ -380,7 +344,7 @@ for file_name in file_names:
         bin_pairs = [] #clearing the bin pairs to free up space
 
         # Write out the ids of the reads used to build junctions
-        used_read_ids_name = out_dir+"used_read_ids.txt"
+        used_read_ids_name = os.path.join(output_dir,"used_read_ids.txt")
         with open(used_read_ids_name,"w") as used_read_ids:
             for jct in denovo_junctions:
                 for bin_pair in jct.bin_pair_group:
@@ -406,7 +370,7 @@ for file_name in file_names:
         #########################################################
         #    Write out the denovo_junctions before collapsing   #
         #########################################################
-        machete_style_name = out_dir+"pre_collapse_novel_junctions_machete.fasta"
+        machete_style_name = os.path.join(output_dir,"pre_collapse_novel_junctions_machete.fasta")
         machete_style_file = open(machete_style_name, "w")
         # Loop through the denovo junctions writing them where necessary
         for denovo_junction in denovo_junctions:
@@ -418,7 +382,8 @@ for file_name in file_names:
 
         # Collapse the junctions that have the same splice site
         start_collapse_junctions = time.time()
-        singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict)
+        group_file_name = os.path.join(output_dir,"collapsing_group_log.txt")
+        singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict,group_file_name)
         sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
         denovo_junctions = singular_jcts+collapsed_jcts
         write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
@@ -434,9 +399,9 @@ for file_name in file_names:
         # Write out the denovo_junction_sequences for each file #
         #########################################################
         start_save_denovo_junctions = time.time()
-        machete_style_name = out_dir+"novel_junctions_machete.fasta"
-        jct_style_file_name = out_dir+"novel_junctions.jct"
-        fusions_file_name = out_dir+"novel_fusions.fasta"
+        machete_style_name = os.path.join(output_dir,"novel_junctions_machete.fasta")
+        jct_style_file_name = os.path.join(output_dir,"novel_junctions.jct")
+        fusions_file_name = os.path.join(output_dir,"novel_fusions.fasta")
 
         # Open the three output files
         fasta_for_bowtie_index = open(fasta_for_bowtie_index_name, "w")

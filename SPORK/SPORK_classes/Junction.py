@@ -48,7 +48,8 @@ class Junction(object):
             otherwise returns the middle index of the consensus as a guess
         """
         if self.upstream_sam.exists and self.downstream_sam.exists:
-            return len(self.upstream_sam.seq)
+            donor_offset = int(self.upstream_sam.read_id.split("_")[-1])
+            return donor_offset+len(self.upstream_sam.seq)
         else:
             return len(self.consensus)/2
 
@@ -237,8 +238,8 @@ class Junction(object):
         chrom2 = self.downstream_sam.chromosome
         genes1 = self.upstream_sam.str_gene()
         genes2 = self.downstream_sam.str_gene()
-        start1 = self.upstream_sam.start
-        start2 = self.downstream_sam.start
+        pos1 = self.upstream_sam.stop
+        pos2 = self.downstream_sam.start
         strand1 = self.upstream_sam.strand
         strand2 = self.downstream_sam.strand
         fusion = "fusion" if self.check_fusion() else "no_fusion"
@@ -246,25 +247,17 @@ class Junction(object):
         #Start building the fasta string
         fasta_str = ""
         fasta_str += ">"
-        fasta_str += str(chrom1)+":"+str(genes1)+":"+str(start1)+":"+str(strand1)+"|"
-        fasta_str += str(chrom2)+":"+str(genes2)+":"+str(start2)+":"+str(strand2)+"|"
+        fasta_str += str(chrom1)+":"+str(genes1)+":"+str(pos1)+":"+str(strand1)+"|"
+        fasta_str += str(chrom2)+":"+str(genes2)+":"+str(pos2)+":"+str(strand2)+"|"
         fasta_str += fusion
         fasta_str += ",num="+str(len(self.bin_pair_group))
         fasta_str += ",score="+str(self.score)
         fasta_str += ",gap="+str(self.splice_gap())
         fasta_str += "\n"
 
-        # Add N padding to the consensus to get a uniform len
-        full_consensus = None
-        if self.splice_ind() != -1:
-            splice_flank_len = int(self.constants_dict["splice_flank_len"])
-            left_padding = "N"*(splice_flank_len-self.splice_ind())
-            right_padding = "N"*(splice_flank_len-(len(self.consensus)-self.splice_ind()))
-            five_consensus = self.consensus[:self.splice_ind()]
-            three_consensus = self.consensus[self.splice_ind():]
-            full_consensus = left_padding+five_consensus+three_consensus+right_padding
-
         #Add the actual padded consensus to the output string
+        splice_flank_len = int(self.constants_dict["splice_flank_len"])
+        full_consensus = self.format_consensus(splice_flank_len)
         fasta_str += str(full_consensus)+"\n"
 
         return fasta_str
@@ -305,17 +298,8 @@ class Junction(object):
         fasta_str += "splice:"+str(self.splice_type())+"|"
         fasta_str += "jct_ind:"+str(jct_ind)+"|\n" if jct_ind else "\n"
 
-        # Add N padding to the consensus to get a uniform len
-        full_consensus = None
-        if self.splice_ind() != -1:
-            splice_flank_len = int(self.constants_dict["splice_flank_len"])
-            left_padding = "N"*(splice_flank_len-self.splice_ind())
-            right_padding = "N"*(splice_flank_len-(len(self.consensus)-self.splice_ind()))
-            five_consensus = self.consensus[:self.splice_ind()]
-            three_consensus = self.consensus[self.splice_ind():]
-            full_consensus = left_padding+five_consensus+three_consensus+right_padding
-
-
+        splice_flank_len = int(self.constants_dict["splice_flank_len"])
+        full_consensus = self.format_consensus(splice_flank_len)
         fasta_str += str(full_consensus)+"\n"
 
         #Also printing out gtf information
@@ -361,6 +345,23 @@ class Junction(object):
         fasta_str += "took-rev-comp:"+str(self.took_reverse_compliment)+"|\n"
 
         # Add N padding to the consensus to get a uniform len
+        splice_flank_len = int(self.constants_dict["splice_flank_len"])
+        full_consensus = self.format_consensus(splice_flank_len)
+        fasta_str += str(full_consensus)+"\n"
+        return fasta_str
+
+    
+    #Add N padding to the consensus to get a uniform len
+    #With the splice site in the middle
+    def format_consensus(self,splice_flank_len):
+        """
+        Goal: return the consensus properly formatted centered and uniform len
+        Arguments:
+            splice_flank_len is an int deciding how long either side should be
+            from the consensus
+        Returns:
+            a string of either the full consensus of None if there is no splice ind
+        """
         full_consensus = None
         if self.splice_ind() != -1:
             splice_flank_len = int(self.constants_dict["splice_flank_len"])
@@ -369,10 +370,8 @@ class Junction(object):
             five_consensus = self.consensus[:self.splice_ind()]
             three_consensus = self.consensus[self.splice_ind():]
             full_consensus = left_padding+five_consensus+three_consensus+right_padding
-
-
-        fasta_str += str(full_consensus)+"\n"
-        return fasta_str
+        return str(full_consensus)
+   
 
     #Give back the R1 readIDs used to make this junction
     def get_read_ids(self):
