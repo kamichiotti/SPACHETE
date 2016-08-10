@@ -7,15 +7,12 @@ import os
 import re
 
 # Specific Imports
-self_path = os.path.dirname(os.path.abspath(__file__))
-classes_path = os.path.join(self_path,"SPORK_classes")
-sys.path.append(classes_path)
-from consensus_utils import *
-from Junction import Junction
-from BinPair import BinPair
-from GTFEntry import GTFEntry
-from SAMEntry import SAMEntry
-from FastQEntry import FastQEntry
+from SPORK_consensus_utils import *
+from SPORK_Junction import Junction
+from SPORK_BinPair import BinPair
+from SPORK_GTFEntry import GTFEntry
+from SPORK_SAMEntry import SAMEntry
+from SPORK_FastQEntry import FastQEntry
 
 #######################################
 #   Get Reference and GTF from Mode   #
@@ -24,10 +21,11 @@ from FastQEntry import FastQEntry
 # Human defaults are used and currently the only supported mode
 # Could imagine lots of if else statements with other supported references though
 # Putting this in the utils file should allow for easy reference addition
-def get_reference_and_gtf_from_mode(mode):
+def get_reference_and_gtf_from_mode(ref_dir,mode="hg19"):
     """
     Goal: take in the desired mode and return the index and gtf path
     Arguments:
+        the path to the circ_ref directory that MACHETE also uses
         the mode (currently only allows hg19, so this function is mostly for show)
         will become an 'elif' tree as more and more indicies are added
 
@@ -36,11 +34,15 @@ def get_reference_and_gtf_from_mode(mode):
         note that regardless of the mode it is currently
         returning hg19 information
     """
-    index_path = "/scratch/PI/horence/rob/index/"
-    reference = index_path+"hg19"
-    gtf = "/scratch/PI/horence/rob/index/hg19_genes.gtf"
+    #index_path = "/scratch/PI/horence/rob/index/"
+    #reference = index_path+"hg19"
+    reference = ref_dir
+    gtf_path = ""
+    if mode == "hg19":
+        gtf_path = os.path.join("gtfs","hg19_gtfs")
+        reference = os.path.join(reference,"hg19_genome")
 
-    return reference,gtf
+    return reference,gtf_path
 
 
 #################################
@@ -404,10 +406,10 @@ def get_best_splice(sam_five_list,sam_three_list,consensus,max_mismatches):
 #####################
 #   Generate GTFS   #
 #####################
-# Helper function to generate a list of gtf objects from a gtf_file
-def generate_gtfs(gtf_file_name):
+# Helper function to generate a list of gtf objects from a gtf path full of gtf files
+def generate_gtfs(gtf_path):
     """
-    Goal: simply open the gtf_file and put gtf objects in a list
+    Goal: open all the gtf_files and put all gtf objects in a list from the given path
     Arguments:
         gtf_file_name is the full path to the gtf file
 
@@ -415,10 +417,12 @@ def generate_gtfs(gtf_file_name):
         gtfs is a list[GTFEntry]
     """
     gtfs = []
-    with open(gtf_file_name,"r") as gtf_file:
-        for gtf_line in gtf_file.readlines():
-            gtf = GTFEntry(gtf_line)
-            gtfs.append(gtf)
+    gtf_file_names = [gtf_name for gtf_name in os.listdir(gtf_path) if "gtf" in gtf_name]
+    for gtf_file_name in gtf_file_names:
+        with open(os.path.join(gtf_path,gtf_file_name),"r") as gtf_file:
+            for gtf_line in gtf_file.readlines():
+                gtf = GTFEntry(gtf_line)
+                gtfs.append(gtf)
 
     return gtfs
 

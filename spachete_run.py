@@ -240,9 +240,10 @@ SPORK_OPTIONS += "--input-dir "+CIRCPIPE_DIR+" "
 SPORK_OPTIONS += "--output-dir "+OUTPUT_DIR+" "
 SPORK_OPTIONS += "--stem-name "+SPORK_STEM_NAME+" "
 #subprocess.call(["python","SPORK/SPORK_main.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
-spork_process = subprocess.Popen(["python","SPORK/SPORK_main.py",
+spork_process = subprocess.Popen(["python","SPORK_main.py",
                                     "--input-dir",CIRCPIPE_DIR,
                                     "--output-dir",OUTPUT_DIR,
+                                    "--ref-dir",CIRCREF,
                                     "--stem-name",SPORK_STEM_NAME],
                                     stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 spork_out,spork_err = spork_process.communicate()
@@ -251,7 +252,7 @@ sys.stderr.write(spork_err)
 write_time("Run spork",start_time,timer_file_path)
 
 ###########!!!NOTE!!! Exiting right after spork for debugging
-#sys.exit(1)
+sys.exit(1)
 
 
 

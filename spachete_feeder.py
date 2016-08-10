@@ -73,6 +73,8 @@ if include_stems:
 # Running and Building output directories for each Stem  #
 ##########################################################
 processes = []
+out_files = []
+err_files = []
 with open(FullStemFile,"r") as stem_file:
     stems = stem_file.readlines()
     for stem in sorted(stems):
@@ -149,38 +151,46 @@ with open(FullStemFile,"r") as stem_file:
         OPTIONS += " --reg-indel-indices "+REG_INDEL_INDICES
         OPTIONS += " --circref-dir "+CIRCREF
 
+
+        machete_out = open(os.path.join(OUTPUT_DIR,"machete_"+stem+".out"),"w")
+        machete_err = open(os.path.join(OUTPUT_DIR,"machete_"+stem+".err"),"w")
+        out_files.append(machete_out)
+        err_files.append(machete_err)
+
+        """
+        #Sending jobs to the SLURM scheduler (comment out if not on SLURM)
+        job_name = stem[-5:] #annoying that the full job name doesn't show
+        slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
+        slurm_err_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".err")
+
         sub_SLURM_name = os.path.join(OUTPUT_DIR,stem+"_job.sh")
         with open(sub_SLURM_name,"w") as sub_SLURM:
             sub_SLURM.write("#!/bin/bash\n")
             sub_SLURM.write("python spachete_run.py"+OPTIONS+"\n")
 
-        slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
-        slurm_err_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".err")
-        job_name = stem[-5:] #annoying that the full job name doesn't show
-        machete_out = open(os.path.join(OUTPUT_DIR,"machete_"+stem+".out"),"w")
-        machete_err = open(os.path.join(OUTPUT_DIR,"machete_"+stem+".err"),"w")
-
-        #Sending jobs to the SLURM scheduler
-        #NOTE I'm giving 40GBs to each job, which might not be enough
-        subprocess.call(["sbatch","-p","owners","--mem=40000","--time=8:00:00",
+        subprocess.call(["sbatch","-p","horence","--mem=20000","--time=24:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
+        """
 
 
         #This is for multithreading w/out submitting a SLURM job
-        """
         processes.append(subprocess.Popen(["python","spachete_run.py",
                                            "--circpipe-dir",CIRCPIPE_DIR,
                                            "--output-dir",OUTPUT_DIR,
                                            "--hg19Exons",EXONS,
                                            "--reg-indel-indices",REG_INDEL_INDICES,
-                                           "--circref-dir",CIRCREF]))
-        """
+                                           "--circref-dir",CIRCREF],
+                                           stdout=machete_out,stderr=machete_err))
+
 
 
 #Force all the jobs to complete before exiting
-for p in processes:
-    p.communicate()
-print "Done"
+for p_ind in range(len(processes)):
+    processes[p_ind].communicate()
+    out_files[p_ind].close()
+    err_files[p_ind].close()
+
+print "Finished spachete feeder"
 
 

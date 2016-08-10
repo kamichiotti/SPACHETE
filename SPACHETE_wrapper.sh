@@ -32,8 +32,8 @@
 #    CML UConn samples      #
 #############################
 KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos"
-#STEM_INCLUDE_ONLY_LIST=("SRR3192415" "SRR3192413")
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos_collapsed"
+STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")
 
 #################################
 #    Normal breast samples      #
@@ -63,7 +63,7 @@ OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos"
 #  Normal Genome Samples     #
 ##############################
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/normal_human_genome/ERR1549500"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome_collapsed"
 
 
 
@@ -95,7 +95,8 @@ then
     OPTIONS="$OPTIONS --stem-include-list $INCLUDE_LIST"
 fi
 
-
+echo "About to call"
 python spachete_feeder.py $OPTIONS 1> out_spachete_feeder.txt 2> out_spachete_feeder.err
+echo "Done calling"
 
 

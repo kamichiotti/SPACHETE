@@ -23,21 +23,19 @@ import os
 ###########################
 # Script specific Imports #
 ###########################
-self_path = os.path.dirname(os.path.abspath(__file__))
-classes_path = os.path.join(self_path,"SPORK_classes")
-sys.path.append(classes_path)
-from consensus_utils import *
+from SPORK_consensus_utils import *
 from SPORK_utils import *
-from Junction import Junction
-from BinPair import BinPair
-from GTFEntry import GTFEntry
-from SAMEntry import SAMEntry
-from FastQEntry import FastQEntry
+from SPORK_Junction import Junction
+from SPORK_BinPair import BinPair
+from SPORK_GTFEntry import GTFEntry
+from SPORK_SAMEntry import SAMEntry
+from SPORK_FastQEntry import FastQEntry
+
 
 ###########################
 #  Parse Input Arguments  #
 ###########################
-arg_description = "Required Args: --input-dir, --output-dir"
+arg_description = "Required Args: --input-dir, --output-dir, --ref-dir"
 arg_description += "\n"+"Optional Args: --stem-name, --flank-len, --mode"
 
 parser = argparse.ArgumentParser(description=arg_description)
@@ -45,6 +43,8 @@ parser.add_argument("--input-dir",required=True,dest="input_dir",help="Directory
                     "(i.e. '/scratch/PI/horence/rob/parent_dirs/fetal_lungs/fetal_lung_01')")
 parser.add_argument("--output-dir",required=True,dest="output_dir",help="Output directory for resuts " \
                     "(i.e. '/scratch/PI/horence/rob/spachete_outputs/normal_fetal')")
+parser.add_argument("--ref-dir",required=True,dest="ref_dir",help="Directory with bowtie2 indices of the desired genome, same as " \
+                    "MACHETE CIRCREF (i.e. '/share/PI/horence/circularRNApipeline_Cluster/index')")
 parser.add_argument("--stem-name",required=False,dest="stem_name",help="Stem name for SPORK use in SPACHETE " \
                     "to restrict SPORK from working on all the R1 files (i.e. 'SRR3192409')")
 parser.add_argument("--flank-len",required=False,dest="flank_len",help="Flanking length on either side of the junction " \
@@ -55,6 +55,7 @@ parser.add_argument("--mode",required=False,dest="mode",help="Mode is the refere
 args = parser.parse_args()
 input_dir = args.input_dir
 output_dir = os.path.join(args.output_dir,"spork_out")
+ref_dir = args.ref_dir
 stem_name = args.stem_name
 splice_flank_len = args.flank_len
 mode = args.mode
@@ -96,7 +97,7 @@ start_entire_time = time.time()
 # Searching Parent Dir for Input Files #
 ########################################
 # Find the correct reference index based on the mode
-reference, gtf = get_reference_and_gtf_from_mode(mode)
+reference,gtf_path = get_reference_and_gtf_from_mode(ref_dir,mode)
 
 # Loop through the directory to use only R1 fastq files
 # NOTE maybe move this to the utils script
@@ -143,7 +144,7 @@ constants_dict = {"input_dir":input_dir,"mode":mode,"splice_flank_len":splice_fl
                   "splice_finding_min_score":splice_finding_min_score,"read_gap_score":read_gap_score,"min_bases_per_col":min_bases_per_col,
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
                   "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,"use_prior":use_prior,
-                  "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf":gtf,"collapse_thresh":collapse_thresh}
+                  "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf_path":gtf_path,"collapse_thresh":collapse_thresh}
 
 ###################################
 # Loop through each R1 input file #
@@ -277,7 +278,7 @@ for file_name in file_names:
     # [6] Get GTF annotation data for each jct
     # [7] Write out the denovo jcts
     fasta_for_bowtie_index_name = os.path.join(output_dir,"novel_junctions.fasta")
-    gtfs = generate_gtfs(gtf)
+    gtfs = generate_gtfs(gtf_path)
 
     if use_prior and os.path.isfile(fasta_for_bowtie_index_name):
         write_time("Using prior jcts: "+fasta_for_bowtie_index_name,time.time(),timer_file_path)
@@ -364,9 +365,8 @@ for file_name in file_names:
         start_get_jct_gtf_info = time.time()
         get_jct_gtf_info(denovo_junctions,gtfs)
         write_time("Time to get jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
-        print len(denovo_junctions)
+        sys.stdout.write(str(len(denovo_junctions))+"\n")
 
-        """
         #########################################################
         #    Write out the denovo_junctions before collapsing   #
         #########################################################
@@ -379,7 +379,6 @@ for file_name in file_names:
         # Close the three output files
         machete_style_file.close()
  
-
         # Collapse the junctions that have the same splice site
         start_collapse_junctions = time.time()
         group_file_name = os.path.join(output_dir,"collapsing_group_log.txt")
@@ -387,7 +386,6 @@ for file_name in file_names:
         sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
         denovo_junctions = singular_jcts+collapsed_jcts
         write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
-        """
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()

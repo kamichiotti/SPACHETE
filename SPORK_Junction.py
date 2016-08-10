@@ -1,7 +1,7 @@
 #Identified junction class
 
 #Imports
-from SAMEntry import SAMEntry
+from SPORK_SAMEntry import SAMEntry
 import sys
 
 #Junction class
