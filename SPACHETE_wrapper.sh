@@ -17,6 +17,12 @@
 
 
 #############################
+#    Input and outputs      #
+#############################
+KNIFE_DIR=""
+OUT_DIR=""
+
+#############################
 #    EWS-Fli  Test run      #
 #############################
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/EWS_FLI_bigmem/EWS_bigmem"
@@ -31,9 +37,9 @@
 #############################
 #    CML UConn samples      #
 #############################
-KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos_collapsed"
-STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")
+#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos_collapsed"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")
 
 #################################
 #    Normal breast samples      #
@@ -66,20 +72,15 @@ STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")
 #OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome_collapsed"
 
 
-
-
-
-
-
-
-
 ############################################
-#PATHS THAT DONT NEED TO CHANGE ON SHERLOCK#
+# PATHS THAT SHOULD BE THE SAME AS MACHETE #
 ############################################
-#INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/IndelIndices"
-EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
-INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
-CIRC_REF="/share/PI/horence/circularRNApipeline_Cluster/index"
+#EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
+#INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
+#CIRC_REF="/share/PI/horence/circularRNApipeline_Cluster/index"
+EXONS_DIR=""
+INDEL_INDICES=""
+CIRC_ReF=""
 
 #Build up the OPTIONS string
 OPTIONS=""
