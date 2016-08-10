@@ -1,13 +1,54 @@
 # SPACHETE
 Flow of SPACHETE:
+
 1. SPACHETE_wrapper.sh, which is just a wrapper script to assign paths and then pass them into spachete_feeder.py
-2. spachete_feeder.py which creates output directories, and calls spachete_run.py in a parallel way
-3. spachete_run.py which is basically "run.py" but with a SPORK call placed in there and some machete calls removed
-   the actual SPORK call is to "SPORK/denovo_pipeline.py
+2. spachete_feeder.py then creates output directories, and calls spachete_run.py in a parallel way on each stem
+3. spachete_run.py is basically "run.py" but with a SPORK call placed in there and some machete calls removed
+   the actual SPORK call is to "SPORK_main.py"
 
 The output directory of SPACHETE will have a subdirectory for each stem, and each of these subdirectories
 will look the same as that of MACHETE, with an additional folder called "spork_out" which has the spork run data and information
+```
+├── SPACHETE_out_CML
+    ├── SRR3192409
+       ├── BadFJ
+       ├── BowtieIndels
+       ├── BowtieIndex
+       ├── DistantPEFiles
+       ├── err_and_out
+       ├── FarJuncIndels
+       ├── FarJuncSecondary
+       ├── FarJunctionAlignments
+       ├── fasta
+       ├── GLM_classInput
+       ├── IndelsHistogram
+       ├── machete_SRR3192409.err
+       ├── machete_SRR3192409.out
+       ├── reports
+       ├── slurm_SRR3192409.err
+       ├── slurm_SRR3192409.out
+       ├── *spork_out*
+       └── StemList.txt
+    ├── SRR3192410
+    ├── SRR3192411
+    ├── SRR3192412
+    ├── SRR3192413
+    ├── SRR3192415
+    ├── SRR3192416
+    ├── SRR3192417
+    ├── SRR3192422
+    └── StemList.txt
+```
+## Changes should only need to be made in the SPACHETE_wrapper.sh in order to get spachete working.
 
+In this `SPACHETE_wrapper.sh` information such as data input paths, data output paths, and index paths will likely need to be changed, but most of them will be identical to what MACHETE currently uses on 7-Bridges:
+
+1. `KNIFE_DIR` is the KNIFE output directory (same as MACHETE), that contains the `orig` file (i.e. "/scratch/PI/horence/gillian/CML_UConn/circpipe_K562")
+2. `OUT_DIR` is the directory location to save SPACHETE output (i.e. "/scratch/PI/horence/rob/spachete_outputs/SPACHETE_out_CML"). In this directory a subdirectory will be created for each stem in the KNIFE_DIR.
+3. `EXONS_DIR` should be the same path as that used for MACHETE (i.e. "/scratch/PI/horence/gillian/HG19exons")
+4. `INDEL_INDICES` is the same path as that used for MACHETE (i.e. "/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/")
+5. `CIRC_REF` is the same path as that used for MACHETE (i.e. "/share/PI/horence/circularRNApipeline_Cluster/index")
+6. optionally can include a line to instruct SPACHETE to only run on certain stems. An example is `STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")` which only only run these two stems. If STEM_INCLUDE_ONLY_LIST is not defined or has nothing in it, all stems will be processed (note I'm not sure if any of `STEM_INCLUDE_ONLY_LIST` handling are bash-specific in `SPACHETE_wraper.sh`)
 
 
 
