@@ -240,7 +240,7 @@ SPORK_OPTIONS += "--input-dir "+CIRCPIPE_DIR+" "
 SPORK_OPTIONS += "--output-dir "+OUTPUT_DIR+" "
 SPORK_OPTIONS += "--stem-name "+SPORK_STEM_NAME+" "
 #subprocess.call(["python","SPORK/SPORK_main.py",ALIGN_PARDIR,DATASET_NAME,MODE,NUM_FLANKING,NTRIM,DENOVOCIRC,OUTPUT_DIR,SPORK_STEM_NAME])
-spork_process = subprocess.Popen(["python","SPORK_main.py",
+spork_process = subprocess.Popen(["python",os.path.join(MACHETE,"SPORK_main.py"),
                                     "--input-dir",CIRCPIPE_DIR,
                                     "--output-dir",OUTPUT_DIR,
                                     "--ref-dir",CIRCREF,

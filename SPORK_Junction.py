@@ -48,8 +48,10 @@ class Junction(object):
             otherwise returns the middle index of the consensus as a guess
         """
         if self.upstream_sam.exists and self.downstream_sam.exists:
-            donor_offset = int(self.upstream_sam.read_id.split("_")[-1])
-            return donor_offset+len(self.upstream_sam.seq)
+            #shouldn't have to do this anymore since I fixed the reads in splice utils
+            #donor_offset = int(self.upstream_sam.read_id.split("_")[-1])
+            #return donor_offset+len(self.upstream_sam.seq)
+            return len(self.upstream_sam.seq)
         else:
             return len(self.consensus)/2
 
@@ -67,30 +69,41 @@ class Junction(object):
             if one or both of the sam's are undefined return -1
         """
         if self.upstream_sam.exists and self.downstream_sam.exists:
+            upstream_pos = self.consensus.index(self.upstream_sam.seq)+len(self.upstream_sam.seq)
+            downstream_pos = self.consensus.index(self.downstream_sam.seq)
+
             upstream_pos = -1
             downstream_pos = -1
-            comp = {"A":"T","T":"A","C":"G","G":"C","N":"N"}
 
+            #comp = {"A":"T","T":"A","C":"G","G":"C","N":"N"}
+            #rev_upstream_seq = "".join([comp[x] for x in self.upstream_sam.seq])[::-1]
+            #rev_downstream_seq = "".join([comp[x] for x in self.downstream_sam.seq])[::-1]
+
+            #don_seq = self.consensus[:self.splice_ind()]
+            #acc_seq = self.consensus[self.splice_ind():]
+            #sys.stderr.write(don_seq+"|"+acc_seq+"\n")
+            #sys.stderr.write(self.upstream_sam.seq+"\n")
+            #sys.stderr.write(rev_upstream_seq+"\n")
+            #sys.stderr.write(self.downstream_sam.seq+"\n")
+            #sys.stderr.write(rev_downstream_seq+"\n\n")
             #Check if mapping needs to have rev comp for upstream
-            if self.upstream_sam.seq in self.consensus:
-                upstream_pos = self.consensus.index(self.upstream_sam.seq)+len(self.upstream_sam.seq)
-            else:
-                rev_upstream_seq = "".join([comp[x] for x in self.upstream_sam.seq])[::-1]
-                upstream_pos = self.consensus.index(rev_upstream_seq)+len(self.upstream_sam.seq)
+            #if self.upstream_sam.seq in self.consensus:
+            #    upstream_pos = self.consensus.index(self.upstream_sam.seq)+len(self.upstream_sam.seq)
+            #else:
+            #    upstream_pos = self.consensus.index(rev_upstream_seq)+len(self.upstream_sam.seq)
 
             #Check if mapping needs to have rev comp for downstream
-            if self.downstream_sam.seq in self.consensus:
-                downstream_pos = self.consensus.index(self.downstream_sam.seq)
-            else:
-                rev_downstream_seq = "".join([comp[x] for x in self.downstream_sam.seq])[::-1]
-                downstream_pos = self.consensus.index(rev_downstream_seq)
+            #if self.downstream_sam.seq in self.consensus:
+            #    downstream_pos = self.consensus.index(self.downstream_sam.seq)
+            #else:
+            #    downstream_pos = self.consensus.index(rev_downstream_seq)
             
-            #Return the difference (should always be positive)
+            #Return the difference (should be positive for linear)
             return upstream_pos-downstream_pos
 
         #If at least one of the two is undefined then just return -1
         else:
-            return -1
+            return None
 
 
     #Use the sam's again to find the size of the gap between the two pieces
@@ -184,7 +197,7 @@ class Junction(object):
             return -1
 
     #Return whether or not an upstream and downstream is at a boundary
-    def at_boundary(self,stream,radius=3):
+    def at_boundary(self,stream,radius=8):
         """
         Goal: check to see if the specified sam is at an exon boundary
         Arguments:
@@ -301,6 +314,8 @@ class Junction(object):
         splice_flank_len = int(self.constants_dict["splice_flank_len"])
         full_consensus = self.format_consensus(splice_flank_len)
         fasta_str += str(full_consensus)+"\n"
+        fasta_str += str(self.upstream_sam.seq)+"\n"
+        fasta_str += " "*self.splice_ind()+str(self.downstream_sam.seq)+"\n"
 
         #Also printing out gtf information
         #fasta_str += "Upstream_gtf:"+str(self.upstream_sam.gtf)+"\n"

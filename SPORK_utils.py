@@ -21,7 +21,7 @@ from SPORK_FastQEntry import FastQEntry
 # Human defaults are used and currently the only supported mode
 # Could imagine lots of if else statements with other supported references though
 # Putting this in the utils file should allow for easy reference addition
-def get_reference_and_gtf_from_mode(ref_dir,mode="hg19"):
+def get_reference_and_gtf_from_mode(ref_dir,abs_path,mode="hg19"):
     """
     Goal: take in the desired mode and return the index and gtf path
     Arguments:
@@ -39,7 +39,7 @@ def get_reference_and_gtf_from_mode(ref_dir,mode="hg19"):
     reference = ref_dir
     gtf_path = ""
     if mode == "hg19":
-        gtf_path = os.path.join("gtfs","hg19_gtfs")
+        gtf_path = os.path.join(abs_path,"gtfs","hg19_gtfs")
         reference = os.path.join(reference,"hg19_genome")
 
     return reference,gtf_path
@@ -164,9 +164,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
         # Takes just the 5' ends to get the pos
         # the full original unaligned seq
         mapped_reads = [member.five_prime_SAM for member in group_members]
-        #start_build_consensus = time.time()
         bin_consensus,bin_score = build_and_score_consensus(mapped_reads,five_prime_strand,id_to_seq,bin_size,constants_dict)
-        #write_time("--Time to build a single consensus n="+str(len(mapped_reads))+": "+junction_num,start_build_consensus,constants_dict["timer_file_path"])
 
         # TODO what do I do if the five and three prime strands are not the same?
         # If the reverse compliment was taken above then take the rev compliment of the consensus too
@@ -183,7 +181,6 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
             denovo_junctions.append(denovo_junction)
 
 
-        #write_time("-Time to completely process a single junction: "+junction_num,start_build_junction,constants_dict["timer_file_path"])
     return denovo_junctions
 
 
@@ -205,6 +202,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
     """
     # Gather info from the constants dictionary
     splice_finder_temp_name = os.path.join(constants_dict["output_dir"],"splice_finder_temp_")
+    #thirds_len = constants_dict["thirds_len"]
     min_score = constants_dict["splice_finding_min_score"]
     max_mismatches = int(constants_dict["splice_finding_allowed_mismatches"])
     read_gap_score = constants_dict["read_gap_score"]
@@ -232,12 +230,17 @@ def find_splice_inds(denovo_junctions,constants_dict):
             junction = denovo_junctions[jct_ind]
             cons_len = len(junction.consensus)
             splice_map_size = len(junction.consensus)/3
+            #NOTE found that I was forcinng splice sites to be too central if I used the thirds len
+            #NOTE and lost BCR-ABL this way, so instead I'll stick with using 1/3 of the consensus
+            #splice_map_size = thirds_len
 
             five_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(0,cons_len-2*splice_map_size+1)]
             three_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(splice_map_size,cons_len-splice_map_size+1)]
 
-            five_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"+five_prime_list[ind] for ind in range(len(five_prime_list))]
-            three_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"+three_prime_list[ind] for ind in range(len(three_prime_list))]
+            five_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"
+                                  +five_prime_list[ind] for ind in range(len(five_prime_list))]
+            three_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"
+                                   +three_prime_list[ind] for ind in range(len(three_prime_list))]
 
             five_temp_file.write("\n".join(five_prime_fa_list)+"\n")
             three_temp_file.write("\n".join(three_prime_fa_list)+"\n")
@@ -281,6 +284,12 @@ def find_splice_inds(denovo_junctions,constants_dict):
         sys.stdout.flush()
         five_sam_entry = SAMEntry(five_sam_line)
         three_sam_entry = SAMEntry(three_sam_line)
+        #If a sam maps to the minus strand, switch it's start and stop position
+        if five_sam_entry.strand == "-":
+            five_sam_entry.start,five_sam_entry.stop = [five_sam_entry.stop,five_sam_entry.start]
+        if three_sam_entry.strand == "-":
+            three_sam_entry.start,three_sam_entry.stop = [three_sam_entry.stop,three_sam_entry.start]
+        
         five_jct_ind = int(five_sam_entry.read_id.split("_")[1])
         three_jct_ind = int(three_sam_entry.read_id.split("_")[1])
 
@@ -308,14 +317,16 @@ def find_splice_inds(denovo_junctions,constants_dict):
         # Niether the 5' nor 3' sam is at the prev_jct_ind
         else:
             prev_consensus = denovo_junctions[prev_jct_ind].consensus
-            best_splices[prev_jct_ind] = get_best_splice(sam_five_list,sam_three_list,prev_consensus,max_mismatches)
+            best_five,best_three = get_best_splice(sam_five_list,sam_three_list,prev_consensus,max_mismatches)
+            best_splices[prev_jct_ind] = [best_five,best_three]
             sam_five_list = []
             sam_three_list = []
             prev_jct_ind = min(five_jct_ind,three_jct_ind)
 
     # Have to push the last jct lists into the shared_dict
     prev_consensus = denovo_junctions[prev_jct_ind].consensus
-    best_splices[prev_jct_ind] = get_best_splice(sam_five_list,sam_three_list,prev_consensus,max_mismatches)
+    best_five,best_three = get_best_splice(sam_five_list,sam_three_list,prev_consensus,max_mismatches)
+    best_splices[prev_jct_ind] = [best_five,best_three]
     
     # Close the 5' and 3' sam files
     five_prime_sam_file.close()
@@ -328,12 +339,41 @@ def find_splice_inds(denovo_junctions,constants_dict):
         sys.stdout.flush()
         jct = denovo_junctions[jct_ind]
 
-        # Use calculted best splice if was previously found
-        if jct_ind in best_splices:
+        # Use calculted best splice if was previously found and both the
+        # upstream and downstream elements exist
+        if jct_ind in best_splices and all([sam.exists for sam in best_splices[jct_ind]]):
             upstream_sam,downstream_sam = best_splices[jct_ind]
+
+            #Need to include the donor seq not used in splitting
+            #gets complicated by + and - strand
+            upstream_ind = int(upstream_sam.read_id.split("_ind_")[1])
+            upstream_len = len(upstream_sam.seq)
+            up_remaining = jct.consensus[:upstream_ind]
+            if upstream_sam.strand == "+":
+                upstream_sam.seq = up_remaining+upstream_sam.seq
+                upstream_sam.start -= len(up_remaining)
+            elif upstream_sam.strand == "-":
+                upstream_sam.seq = up_remaining+reverse_compliment(upstream_sam.seq)
+                upstream_sam.start += len(up_remaining)
             jct.upstream_sam = upstream_sam
+
+            #Need to include the acceptor seq not used in splitting
+            #gets complicated by + and - strand
+            downstream_ind = int(downstream_sam.read_id.split("_ind_")[1])
+            downstream_len = len(downstream_sam.seq)
+            down_remaining = jct.consensus[downstream_ind+2*downstream_len:]
+            if downstream_sam.strand == "+":
+                downstream_sam.seq = downstream_sam.seq+down_remaining
+                downstream_sam.stop += len(down_remaining)
+            elif downstream_sam.strand == "-":
+                downstream_sam.seq = reverse_compliment(downstream_sam.seq)+down_remaining
+                downstream_sam.stop -= len(down_remaining)
             jct.downstream_sam = downstream_sam
+ 
             jcts_with_splice.append(jct)
+
+        # If either the donor or acceptor doesn't map (or both), add it to the
+        # jcts_without_splice list instead NOTE this list is currently not used
         else:
             jcts_without_splice.append(jct)
 
@@ -419,7 +459,9 @@ def generate_gtfs(gtf_path):
     gtfs = []
     gtf_file_names = [gtf_name for gtf_name in os.listdir(gtf_path) if "gtf" in gtf_name]
     for gtf_file_name in gtf_file_names:
-        with open(os.path.join(gtf_path,gtf_file_name),"r") as gtf_file:
+        abs_gtf_file_path = os.path.join(gtf_path,gtf_file_name)
+        sys.stdout.write("Opening GTF file "+abs_gtf_file_path+"\n")
+        with open(abs_gtf_file_path,"r") as gtf_file:
             for gtf_line in gtf_file.readlines():
                 gtf = GTFEntry(gtf_line)
                 gtfs.append(gtf)
@@ -427,50 +469,10 @@ def generate_gtfs(gtf_path):
     return gtfs
 
 
-##############################################
-#Quick check that the gtfs are in fact sorted#
-##############################################
-#A sanity check function
-def check_gtfs_sorted(gtf_file_name):
-    """
-    Goal: this function is not necessary, but checks to ensure a gtf_file is sorted
-    Arguments:
-        gtf_file_name is the full path to the gtf file
-
-    Returns:
-        gtf_sorted which is a boolean telling is the file was sorted or not
-    """
-    with open(gtf_file_name,"r") as gtf_file:
-        #NOTE assumes at least one line in gtf_file (ok assumption)
-        gtf_line = gtf_file.readline()
-        gtf_line = gtf_line.strip()
-        prev_gtf = GTFEntry(gtf_line)
-
-        gtf_sorted = True
-        gtf_line = gtf_file.readline()
-        while gtf_line:
-            gtf_line = gtf_line.strip()
-            gtf = GTFEntry(gtf_line)
-            if gtf.stop < prev_gtf.stop:
-                gtf_sorted = False
-                sys.stderr.write("ERROR: gtfs not sorted:\n")
-                sys.stderr.write("\tprev-gtf: "+str(prev_gtf)+":\n")
-                sys.stderr.write("\tcurr-gtf: "+str(gtf)+":\n\n")
-            else:
-                sys.stdout.write("correct: gtfs sorted:\n")
-                sys.stdout.write("\tprev-gtf: "+str(prev_gtf)+":\n")
-                sys.stdout.write("\tcurr-gtf: "+str(gtf)+":\n\n")
-            prev_gtf = gtf
-            gtf_line = gtf_file.readline()
-
-    return gtf_sorted
-
 #################################
 #   Search Closest GTF wrapper  #
 #################################
-#NOTE this function is repetitive
-#I could improve it by adding another function later
-def find_closest_gtf(jct,chrom_gtfs_start,chrom_gtfs_stop):
+def find_closest_gtf(jct,chrom_gtfs_start,chrom_gtfs_stop,chrom_start_libs,chrom_stop_libs):
     """
     Goal: make it easier to call find closest gtf of upstream and downstream w/out code duplication
     Arguments:
@@ -489,15 +491,23 @@ def find_closest_gtf(jct,chrom_gtfs_start,chrom_gtfs_stop):
     if jct.upstream_sam.exists:
         query = jct.upstream_sam.stop
         chrom = jct.upstream_sam.chromosome
-        if chrom in chrom_gtfs_start and chrom in chrom_gtfs_stop:
-            closest_results["upstream"] = bin_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop)
+        if chrom in chrom_gtfs_start and chrom in chrom_gtfs_stop and chrom in chrom_start_libs and chrom in chrom_stop_libs:
+            gtfs_start = chrom_gtfs_start[chrom]
+            gtfs_stop = chrom_gtfs_stop[chrom]
+            start_lib = chrom_start_libs[chrom]
+            stop_lib = chrom_stop_libs[chrom]
+            closest_results["upstream"] = bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib)
 
     #Find the closest downstream sam gtf checking start and stop of the gtfs
     if jct.downstream_sam.exists:
         query = jct.downstream_sam.start
         chrom = jct.downstream_sam.chromosome
-        if chrom in chrom_gtfs_start and chrom in chrom_gtfs_stop:
-            closest_results["downstream"] = bin_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop)
+        if chrom in chrom_gtfs_start and chrom in chrom_gtfs_stop and chrom in chrom_start_libs and chrom in chrom_stop_libs:
+            gtfs_start = chrom_gtfs_start[chrom]
+            gtfs_stop = chrom_gtfs_stop[chrom]
+            start_lib = chrom_start_libs[chrom]
+            stop_lib = chrom_stop_libs[chrom]
+            closest_results["downstream"] = bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib)
 
     return closest_results
 
@@ -512,7 +522,7 @@ def brute_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
         query is an integer of the genomic coordinate
         chrom is a string of the chromosome
         takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by start
-        takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by stop
+        takes in chrom_gtfs_stop which is a dict["chrom":list[GTFEntry]] sorted by stop
 
     Returns:
         the single closest GTFEntry object
@@ -540,7 +550,7 @@ def brute_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
 #  Binary Search Closest GTF Helper    #
 ########################################
 #A wrapper function which calls the recursive gtf binary search function
-def bin_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
+def bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib):
     """
     Goal: prepare input and handle output from the recursive binary search function
     Arguments:
@@ -552,14 +562,11 @@ def bin_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
     Returns:
         the single closest GTFEntry object
     """
-    start_lib = [gtf.start for gtf in chrom_gtfs_start[chrom]]
-    stop_lib = [gtf.stop for gtf in chrom_gtfs_stop[chrom]]
-
     closest_start,its_start = bin_search_gtf(query,start_lib)
     closest_stop,its_stop = bin_search_gtf(query,stop_lib)
 
-    start_gtf = chrom_gtfs_start[chrom][closest_start] 
-    stop_gtf = chrom_gtfs_stop[chrom][closest_stop]
+    start_gtf = gtfs_start[closest_start] 
+    stop_gtf = gtfs_stop[closest_stop]
    
     start_dist = abs(query-closest_start)
     stop_dist = abs(query-closest_stop)
@@ -572,6 +579,7 @@ def bin_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
 #    Binary Search Closest GTF  #
 #################################
 #Recursive binary search function
+#NOTE this could probably be sped up using bisectleft, but I doubt by much
 def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
     """
     Goal: do a binary search through the library for the closest ind
@@ -579,7 +587,7 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
         query is an int
         library is a list[int] of genomic positions to look through
         start_ind is defaulted to 0 and keeps track of where to look
-        stop_ind is defaulted to -1 and keeps track of where to look
+        end_ind is defaulted to -1 and keeps track of where to look
 
     Returns:
         the index of the closest matching library value to the query
@@ -595,7 +603,7 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
         end_dist = abs(library[end_ind]-query)
         ret_ind = start_ind if start_dist <= end_dist else end_ind
         if disp:
-            print str(its)+")","Found closest to:[",library[ret_ind],"]"
+            sys.stdout.write(str(its)+")"+" Found closest to:["+library[ret_ind]+"]\n")
         return ret_ind,its
     #Recursive case
     else:
@@ -616,7 +624,7 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
 ########################
 # Reads the entire gtf line by line and checks against every junction
 # Reading the genes in as all exons to try and get start and stop site
-def get_jct_gtf_info(junctions,gtfs):
+def get_jct_gtf_info(junctions,gtfs,constants_dict):
     """
     Goal: for each junction find the closest gtf for upstream and downstream
     Arguments:
@@ -637,14 +645,18 @@ def get_jct_gtf_info(junctions,gtfs):
     # Pre sort the gtfs into a start and stop oriented list by chromosome
     chrom_gtfs_start = {}
     chrom_gtfs_stop = {}
+    chrom_start_libs = {}
+    chrom_stop_libs = {}
     for chrom in chrom_gtfs:
         chrom_gtfs_start[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.start)
         chrom_gtfs_stop[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.stop)
+        chrom_start_libs[chrom] = [gtf.start for gtf in chrom_gtfs_start[chrom]]
+        chrom_stop_libs[chrom] = [gtf.stop for gtf in chrom_gtfs_stop[chrom]]
 
     # Loop through the collapsed gtfs to see if the junction is in the range
     for junction in junctions:
         jct_ind = junctions.index(junction)
-        closest_results = find_closest_gtf(junction,chrom_gtfs_start,chrom_gtfs_stop)
+        closest_results = find_closest_gtf(junction,chrom_gtfs_start,chrom_gtfs_stop,chrom_start_libs,chrom_stop_libs)
         if closest_results["upstream"]:
             gtf = closest_results["upstream"]
             junction.upstream_sam.gtf = gtf
@@ -692,39 +704,6 @@ def identify_fusions(junctions,span_cutoff=1e6):
                 fusion_jcts.append(jct)
     
     return fusion_jcts
-
-#####################################
-# Collapse junctions by splice site #
-#####################################
-# Currently keeps linear and non-linear separated even if they share a splice site
-# NOTE currently does not work
-def old_collapse_junctions(junctions):
-    """
-    Goal: take the junctions and collapse ones which represent the same splice site
-    Arguments:
-        junctions is a list[Junction] objects
-
-    Returns:
-        collapsed_junctions is a list[Junction] objects
-        the returned list will always have equal to or fewer objects
-        than the input list
-    """
-    splice_to_jct_dict = {}
-    for junction in junctions:
-        splice_key = junction.upstream_chromosome+"-"+junction.downstream_chromosome+":"+str(junction.splice_site)+":"+str(junction.linear)
-        if splice_key not in splice_to_jct_dict:
-            splice_to_jct_dict[splice_key] = [junction]
-        else:
-            splice_to_jct_dict[splice_key].append(junction)
-            
-    collapsed_junctions = []
-    for jcts_by_splice in splice_to_jct_dict.itervalues():
-        first_junction = jcts_by_splice[0]
-        for shared_jct in jcts_by_splice[1:]:
-            first_junction.add_constitutive_junction(shared_jct)
-        first_junction.combine_constitutive_junctions()
-        collapsed_junctions.append(first_junction)
-    return collapsed_junctions
 
 
 ####################
@@ -937,8 +916,8 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
                         if not prev_don or not prev_acc:
                             continue
                         if abs(don-prev_don) <= collapse_thresh and abs(acc-prev_acc) <= collapse_thresh:
-                            sys.stderr.write("Found match for:\n")
-                            sys.stderr.write(jct.verbose_fasta_string())
+                            #sys.stderr.write("Found match for:\n")
+                            #sys.stderr.write(jct.verbose_fasta_string())
                             prev_group.append(jct)
                             found_prev_group = True
                             break
@@ -951,7 +930,6 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
             #If it didn't find any of the prev_groups, start a new group
             if not found_prev_group:
                 groupings[chroms].append([jct])
-
 
     #Separate singles from groups
     singles = []
@@ -1002,6 +980,7 @@ def reverse_compliment(seq):
                  "g":"c",
                  "N":"N",
                  "n":"n"}
+
     rev_comp_seq = "".join([comp_dict[base] for base in seq])[::-1]
     return rev_comp_seq
 

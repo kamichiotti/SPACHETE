@@ -19,8 +19,94 @@
 #############################
 #    Input and outputs      #
 #############################
-KNIFE_DIR=""
-OUT_DIR=""
+#KNIFE_DIR=""
+#OUT_DIR=""
+
+######################################################################################
+###                                                                                ###
+###                                                                                ###
+###                           Gilian Samples Machete                               ###
+###                                                                                ###
+###                                                                                ###
+######################################################################################
+
+#############################
+#    CML UConn samples      #
+#############################
+KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_8_12_16/"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192409")
+
+#############################
+#     CML test samples      #
+#############################
+#KNIFE_DIR="/scratch/PI/horence/gillian/CML_test/aligned/CML"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/cml_test"
+
+#################################
+#    Normal breast samples      #
+#################################
+#KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/normal_breast"
+
+######################################
+#    Simulated engstrom samples      #
+###############################3######
+#KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/engstrom"
+
+################################
+#    Normal fetal samples      #
+################################
+#KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/normal_fetal"
+
+################################
+#        Bladder samples       #
+################################
+#KNIFE_DIR="/scratch/PI/horence/gillian/bladder/circpipe"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/bladder"
+
+#############################
+#       Ewing samples       #
+#############################
+#KNIFE_DIR="/scratch/PI/horence/gillian/Ewing/circpipe"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/ewing"
+
+#############################
+#      RNaseR samples       #
+#############################
+#KNIFE_DIR="/scratch/PI/horence/gillian/ov_RNaseR_Qatar/ovCircPipe"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/RNaseR"
+
+#############################
+#    Prostate samples       #
+#############################
+#KNIFE_DIR="/scratch/PI/horence/gillian/prostate/aligned/circpipe"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/prostate"
+
+#############################
+#        SEQC study         #
+#############################
+#KNIFE_DIR="/scratch/PI/horence/gillian/SEQC_study_set/circpipe_SEQC"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/seqc"
+
+
+
+
+######################################################################################
+###                                                                                ###
+###                                                                                ###
+###                              Personal Samples                                  ###
+###                                                                                ###
+###                                                                                ###
+######################################################################################
+
+################################
+#  Salzman Ovarian samples     #
+################################
+#KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/OvarianCancer2014_cutAdapt"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/salzman_ov"
 
 #############################
 #    EWS-Fli  Test run      #
@@ -34,37 +120,6 @@ OUT_DIR=""
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/NSC_diff/NSC_diff_test"
 #OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/NSC_diff_test"
 
-#############################
-#    CML UConn samples      #
-#############################
-#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_better_pos_collapsed"
-#STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")
-
-#################################
-#    Normal breast samples      #
-#################################
-#KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast"
-
-######################################
-#    Simulated engstrom samples      #
-###############################3######
-#KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/engstrom"
-
-################################
-#    Normal fetal samples      #
-################################
-#KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal"
-
-################################
-#  Salzman Ovarian samples     #
-################################
-#KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/OvarianCancer2014_cutAdapt"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/salzman_ov"
-
 ##############################
 #  Normal Genome Samples     #
 ##############################
@@ -72,15 +127,21 @@ OUT_DIR=""
 #OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome_collapsed"
 
 
-############################################
-# PATHS THAT SHOULD BE THE SAME AS MACHETE #
-############################################
-#EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
-#INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
-#CIRC_REF="/share/PI/horence/circularRNApipeline_Cluster/index"
-EXONS_DIR=""
-INDEL_INDICES=""
-CIRC_ReF=""
+
+######################################################################################
+###                                                                                ###
+###                                                                                ###
+###                      Paths that are the same as MACHETE                        ###
+###                                                                                ###
+###                                                                                ###
+######################################################################################
+
+EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
+INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
+CIRC_REF="/share/PI/horence/circularRNApipeline_Cluster/index"
+#EXONS_DIR=""
+#INDEL_INDICES=""
+#CIRC_ReF=""
 
 #Build up the OPTIONS string
 OPTIONS=""
@@ -96,8 +157,6 @@ then
     OPTIONS="$OPTIONS --stem-include-list $INCLUDE_LIST"
 fi
 
-echo "About to call"
 python spachete_feeder.py $OPTIONS 1> out_spachete_feeder.txt 2> out_spachete_feeder.err
-echo "Done calling"
 
 

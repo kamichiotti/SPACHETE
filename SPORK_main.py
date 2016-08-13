@@ -20,6 +20,9 @@ import time
 import sys
 import os
 
+#Get the absolute path to this file for 7B
+ABS_PATH = os.path.dirname(os.path.abspath(__file__))
+
 ###########################
 # Script specific Imports #
 ###########################
@@ -85,6 +88,13 @@ ref_gap_score = "--rfg 50,50"           #read gap set to be very high to not all
 min_score = "--score-min L,0,-0.10"     #minimum allowed Bowtie2 score
 allowed_mappings = "1"                  #allowed mappings of a given read. Currently not implemented
 
+thirds_len = 30                         #length to cut the original reads into for the 5' and 3' pieces:
+                                        #   |-------|---------------|-------|
+                                        #       ^     unused middle     ^
+                                        #       |                       |
+                                        # len(5' piece) == thirds_len   |   
+                                        #                          len(3' piece) == third_len
+
 splice_finding_min_score = min_score    #can make more stringent for splice site finding
 splice_finding_allowed_mappings = "1"   #just making this adjustable, probably want to stay at 1
 splice_finding_allowed_mismatches = "1" #used to find high quality splice sites
@@ -97,7 +107,7 @@ start_entire_time = time.time()
 # Searching Parent Dir for Input Files #
 ########################################
 # Find the correct reference index based on the mode
-reference,gtf_path = get_reference_and_gtf_from_mode(ref_dir,mode)
+reference,gtf_path = get_reference_and_gtf_from_mode(ref_dir,ABS_PATH,mode)
 
 # Loop through the directory to use only R1 fastq files
 # NOTE maybe move this to the utils script
@@ -140,7 +150,7 @@ for file_name in all_file_names:
 # This is just a hash that stores the constants set above to allow them easy to pass
 # Probably sloppy code
 constants_dict = {"input_dir":input_dir,"mode":mode,"splice_flank_len":splice_flank_len,"bin_size":bin_size,"group_member_cutoff":group_member_cutoff,
-                  "consensus_score_cutoff":consensus_score_cutoff,"min_score":min_score,"read_gap_score":read_gap_score,
+                  "consensus_score_cutoff":consensus_score_cutoff,"min_score":min_score,"read_gap_score":read_gap_score,"thirds_len":thirds_len,
                   "splice_finding_min_score":splice_finding_min_score,"read_gap_score":read_gap_score,"min_bases_per_col":min_bases_per_col,
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
                   "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,"use_prior":use_prior,
@@ -177,12 +187,10 @@ for file_name in file_names:
     full_paths_in = [R1_file]
     if not os.path.isfile(R2_file):
         R2_file = None
-    if R2_file:
-        print "Found R2 file:",R2_file
-        full_paths_in.append(R2_file)
+        sys.stdout.write("Not found R2 file: Proceeding with just R1\n")
     else:
-        print "Not found R2 file: Proceeding with just R1"
-    sys.stdout.flush()
+        sys.stdout.write("Found R2 file :"+R2_file+"\n")
+        full_paths_in.append(R2_file)
     write_time("Time to find R2 "+R2_file.split("/")[-1],start_find_R2,timer_file_path,False) #false overwrites the timer file
 
     # Create file locations for fq files w/out spaces in headers
@@ -195,16 +203,19 @@ for file_name in file_names:
 
     #Combine the R1 and R2 fastqs adding R1 and R1 to the headers
     #to disambiguate in case of identical matching
-    combined_out_name = os.path.join(output_dir,"combined_reads.fq")
+    if stem_name:
+        combined_out_name = os.path.join(output_dir,stem_name+"_combined_reads.fq")
+    else:
+        combined_out_name = os.path.join(output_dir,"combined_reads.fq")
     with open(combined_out_name,"w") as combined_out:
         if len(full_paths_in) >= 1:
             with open(full_paths_in[0],"r") as R1_in_file:
                 header_line = R1_in_file.readline()
                 while header_line:
                     combined_out.write(header_line.strip()+" R1\n")
-                    combined_out.write(R1_in_file.readline()) #Skip the seq line
-                    combined_out.write(R1_in_file.readline()) #Skip the + line
-                    combined_out.write(R1_in_file.readline()) #Skip the quality line
+                    combined_out.write(R1_in_file.readline()) #Write out the seq line
+                    combined_out.write(R1_in_file.readline()) #Write out the + line
+                    combined_out.write(R1_in_file.readline()) #Write out the quality line
                     header_line = R1_in_file.readline()
 
         if len(full_paths_in) >= 2:
@@ -212,9 +223,9 @@ for file_name in file_names:
                 header_line = R2_in_file.readline()
                 while header_line:
                     combined_out.write(header_line.strip()+" R2\n")
-                    combined_out.write(R2_in_file.readline()) #Skip the seq line
-                    combined_out.write(R2_in_file.readline()) #Skip the + line
-                    combined_out.write(R2_in_file.readline()) #Skip the quality line
+                    combined_out.write(R2_in_file.readline()) #Write out the seq line
+                    combined_out.write(R2_in_file.readline()) #Write out the + line
+                    combined_out.write(R2_in_file.readline()) #Write out the quality line
                     header_line = R2_in_file.readline()
 
 
@@ -222,7 +233,7 @@ for file_name in file_names:
     write_time("Starting main portion",time.time(),timer_file_path)
     start_split_reads = time.time()
     R_file_path = combined_out_name
-    R_file_name = "combined"
+    R_file_name = stem_name if stem_name else "combined"
     five_prime_fq_name = os.path.join(output_dir,"5prime_"+R_file_name.split(".")[0]+".fq")
     three_prime_fq_name = os.path.join(output_dir,"3prime_"+R_file_name.split(".")[0]+".fq")
     if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name):
@@ -237,9 +248,11 @@ for file_name in file_names:
                         plus_line = f_in.readline()
                         quality = f_in.readline()
                         fastq_read = FastQEntry(read_id, seq, plus_line, quality)
-                        fragment_5, fragment_3 = fastq_read.get_edge_thirds()
-                        five_prime_file.write(str(fragment_5))
-                        three_prime_file.write(str(fragment_3))
+                        fragment_5, fragment_3 = fastq_read.get_first_last_n(thirds_len)
+                        #Check that both fragments are defined before writing them out
+                        if fragment_5 and fragment_3:
+                            five_prime_file.write(str(fragment_5))
+                            three_prime_file.write(str(fragment_3))
                         read_id = f_in.readline()
         write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
 
@@ -363,21 +376,20 @@ for file_name in file_names:
 
         # Get GTF information for the identified denovo_junctions
         start_get_jct_gtf_info = time.time()
-        get_jct_gtf_info(denovo_junctions,gtfs)
+        get_jct_gtf_info(denovo_junctions,gtfs,constants_dict)
         write_time("Time to get jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
         sys.stdout.write(str(len(denovo_junctions))+"\n")
 
-        #########################################################
-        #    Write out the denovo_junctions before collapsing   #
-        #########################################################
+        """
+        # Write out the denovo_junctions before collapsing for debugging
+        start_write_pre_collapsed = time.time()
         machete_style_name = os.path.join(output_dir,"pre_collapse_novel_junctions_machete.fasta")
         machete_style_file = open(machete_style_name, "w")
-        # Loop through the denovo junctions writing them where necessary
         for denovo_junction in denovo_junctions:
             jct_ind = denovo_junctions.index(denovo_junction)
             machete_style_file.write(denovo_junction.fasta_MACHETE())
-        # Close the three output files
         machete_style_file.close()
+        write_time("-Time to write pre-collapse junctions ",start_write_pre_collapsed,timer_file_path)
  
         # Collapse the junctions that have the same splice site
         start_collapse_junctions = time.time()
@@ -386,6 +398,7 @@ for file_name in file_names:
         sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
         denovo_junctions = singular_jcts+collapsed_jcts
         write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
+        """
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()
@@ -410,7 +423,8 @@ for file_name in file_names:
         # Loop through the denovo junctions writing them where necessary
         for denovo_junction in denovo_junctions:
             jct_ind = denovo_junctions.index(denovo_junction)
-            fasta_for_bowtie_index.write(denovo_junction.verbose_fasta_string())
+            #NOTE change back to verbose_fasta_string()
+            fasta_for_bowtie_index.write(denovo_junction.fasta_string())
             machete_style_file.write(denovo_junction.fasta_MACHETE())
             jct_style_file.write(str(denovo_junction)+"\n")
             if denovo_junction in fusion_junctions:

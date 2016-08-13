@@ -62,7 +62,7 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
     #This arises most often when a junction only has one unique sequence
     if int(num_possible_discrepancies) <= 0:
         consensus_score = 999999
-        sys.stderr.write("Null consensus:\n"+"\n".join(padded_seqs)+"\n")
+        #sys.stderr.write("Null consensus:\n"+"\n".join(padded_seqs)+"\n")
     else:
         consensus_score = float(num_discrepancies)/int(num_possible_discrepancies)
 
