@@ -87,7 +87,7 @@ with open(FullStemFile,"r") as stem_file:
             continue
 
         OUTPUT_DIR = args.OUTPUT_DIR
-        OUTPUT_DIR += "/"+stem
+        OUTPUT_DIR = os.path.join(OUTPUT_DIR,stem)
         if not os.path.isdir(OUTPUT_DIR):
             os.makedirs(OUTPUT_DIR)
 
@@ -152,8 +152,8 @@ with open(FullStemFile,"r") as stem_file:
         OPTIONS += " --circref-dir "+CIRCREF
 
 
-        machete_out = open(os.path.join(OUTPUT_DIR,"machete_"+stem+".out"),"w")
-        machete_err = open(os.path.join(OUTPUT_DIR,"machete_"+stem+".err"),"w")
+        machete_out = open(os.path.join(OUTPUT_DIR,"spachete_"+stem+".out"),"w")
+        machete_err = open(os.path.join(OUTPUT_DIR,"spachete_"+stem+".err"),"w")
         out_files.append(machete_out)
         err_files.append(machete_err)
 
@@ -189,6 +189,6 @@ for p_ind in range(len(processes)):
     out_files[p_ind].close()
     err_files[p_ind].close()
 
-print "Finished spachete feeder"
+sys.stdout.write("Finished spachete feeder\n")
 
 

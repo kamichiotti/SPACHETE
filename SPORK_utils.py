@@ -165,13 +165,14 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
         # the full original unaligned seq
         mapped_reads = [member.five_prime_SAM for member in group_members]
         bin_consensus,bin_score = build_and_score_consensus(mapped_reads,five_prime_strand,id_to_seq,bin_size,constants_dict)
+        took_reverse_compliment = False
 
+        """
         # TODO what do I do if the five and three prime strands are not the same? (this represents a translocation)
         # If the reverse compliment was taken above then take the rev compliment of the consensus too
         # NOTE currently just taking reverse compliment whenever the 5' strand is negative to help groupings
         #   i.e. if have 5' - and 3' + of a jct and 5' + and 3' - of the same jct, they should be collapsed, but won't be
         #   unless I implement this
-        took_reverse_compliment = False
         #if five_prime_strand == "-" and three_prime_strand == "-":
         if five_prime_strand == "-":
             group_members = [member.take_reverse_compliment() for member in group_members]
@@ -179,6 +180,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
             took_reverse_compliment = True
 
         # If the bin score is high enough then add it
+        """
         if bin_score < consensus_score_cutoff:
             #__init__(consensus,score,bin_pair_group,took_reverse_compliment,constants_dict):
             denovo_junction = Junction(bin_consensus,bin_score,group_members,took_reverse_compliment,constants_dict)
@@ -353,7 +355,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
                 donor_sam.start -= len(up_remaining)
             elif donor_sam.strand == "-":
                 donor_sam.seq = up_remaining+reverse_compliment(donor_sam.seq)
-                donor_sam.start += len(up_remaining)
+                donor_sam.stop += len(up_remaining)
             jct.donor_sam = donor_sam
 
             #Need to include the acceptor seq not used in splitting
@@ -366,7 +368,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
                 acceptor_sam.stop += len(down_remaining)
             elif acceptor_sam.strand == "-":
                 acceptor_sam.seq = reverse_compliment(acceptor_sam.seq)+down_remaining
-                acceptor_sam.stop -= len(down_remaining)
+                acceptor_sam.start -= len(down_remaining)
             jct.acceptor_sam = acceptor_sam
  
             jcts_with_splice.append(jct)
@@ -376,8 +378,17 @@ def find_splice_inds(denovo_junctions,constants_dict):
         else:
             jcts_without_splice.append(jct)
 
+    #Convert all the jcts to have a plus-strand (+) donor for sake of collapsing
+    plus_jcts_with_splice = []
+    for jct_with_splice in jcts_with_splice:
+        for_jct,rev_jct = jct_with_splice.yield_forward_and_reverse()
+        if for_jct.donor_sam.strand == "+":
+            plus_jcts_with_splice.append(for_jct)
+        elif rev_jct.donor_sam.strand == "+":
+            plus_jcts_with_splice.append(rev_jct)
+
     #Return the jcts w/ and w/out splice separately
-    return jcts_with_splice,jcts_without_splice
+    return plus_jcts_with_splice,jcts_without_splice
 
 #######################
 #   Get Best Splice   #
@@ -883,8 +894,9 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
                     group_out_file.write("".join([m.verbose_fasta_string() for m in group])+"\n")
                 counts = [len(member.bin_pair_group) for member in group]
                 max_ind = counts.index(max(counts))
-                sys.stdout.write(group[max_ind].verbose_fasta_string()+"\n")
-                groups.append(group[max_ind])
+                repr_jct = group[max_ind]
+                sys.stdout.write(repr_jct.verbose_fasta_string()+"\n")
+                groups.append(repr_jct)
 
     if group_out_file_name:
         group_out_file.close()
@@ -918,6 +930,39 @@ def reverse_compliment(seq):
 
     rev_comp_seq = "".join([comp_dict[base] for base in seq])[::-1]
     return rev_comp_seq
+
+###################################
+#   Track NUP214 as a test case   #
+###################################
+def follow_nup214(forward_jct,reverse_jct):
+    """
+    Goal: check if forward or reverse nup214 makes more sense in terms
+          of donor and acceptor sites
+    Arguments:
+        forward_jct is of type Junction
+        reverse_jct is of type Junction and is the rev-comp of forward_jct
+
+    Returns:
+        nothing, just writes out info to stdout
+    """
+    if (forward_jct.donor_sam.str_gene() == "NUP214" or 
+            forward_jct.acceptor_sam.str_gene() == "NUP214" or
+            reverse_jct.donor_sam.str_gene() == "NUP214" or
+            reverse_jct.acceptor_sam.str_gene() == "NUP214"):
+        sys.stdout.write("Found a NUP214\n")
+        sys.stdout.write(forward_jct.verbose_fasta_string())
+        sys.stdout.write(str(forward_jct.donor_sam.gtf)+"\n")
+        sys.stdout.write(str(forward_jct.acceptor_sam.gtf)+"\n")
+        sys.stdout.write(reverse_jct.verbose_fasta_string())
+        sys.stdout.write(str(reverse_jct.donor_sam.gtf)+"\n")
+        sys.stdout.write(str(reverse_jct.acceptor_sam.gtf)+"\n")
+        sys.stdout.write("Forward dist: "+str(forward_dist)+" reverse_dist: "+str(reverse_dist)+"\n")
+        sys.stdout.write("Forward donor gtf span:"+str(forward_jct.donor_sam.gtf.span)+"\n")
+        sys.stdout.write("Forward acceptor gtf span:"+str(forward_jct.acceptor_sam.gtf.span)+"\n")
+        sys.stdout.write("Reverse donor gtf span:"+str(reverse_jct.donor_sam.gtf.span)+"\n")
+        sys.stdout.write("Reverse acceptor gtf span:"+str(reverse_jct.acceptor_sam.gtf.span)+"\n")
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
 
 

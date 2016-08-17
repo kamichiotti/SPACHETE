@@ -377,6 +377,7 @@ for file_name in file_names:
         denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
         write_time("-Time to find splice indices ",start_find_splice_inds,timer_file_path)
 
+
         # Write out the denovo_junctions before collapsing for debugging
         start_write_pre_collapsed = time.time()
         machete_style_name = os.path.join(output_dir,"pre_collapse_novel_junctions_machete.fasta")
@@ -399,49 +400,22 @@ for file_name in file_names:
         # Get GTF information for the identified denovo_junctions
         # NOTE currently trying forward and rev-comp junction to see which one is closer to gtfs
         start_get_jct_gtf_info = time.time()
-        forward_jcts = []
-        reverse_jcts = []
-        for jct in denovo_junctions:
-            forward_jct,reverse_jct = jct.yield_forward_and_reverse()
-            forward_jcts.append(forward_jct)
-            reverse_jcts.append(reverse_jct)
+        forward_jcts,reverse_jcts = zip(*[jct.yield_forward_and_reverse() for jct in denovo_junctions])
         
         start_time = time.time()
         get_jct_gtf_info(forward_jcts,gtfs,constants_dict)
-        write_time("Time to get jct gtf info 1 "+R_file_name,start_time,timer_file_path)
-        
+        write_time("Time to get jct gtf info forwards "+R_file_name,start_time,timer_file_path)
         start_time = time.time()
         get_jct_gtf_info(reverse_jcts,gtfs,constants_dict)
-        write_time("Time to get jct gtf info 2 "+R_file_name,start_time,timer_file_path)
+        write_time("Time to get jct gtf info backwards "+R_file_name,start_time,timer_file_path)
         
         gtf_denovo_junctions = []
         for jct_ind in range(len(denovo_junctions)):
             forward_jct = forward_jcts[jct_ind]
             reverse_jct = reverse_jcts[jct_ind]
-
             forward_dist = forward_jct.boundary_dist("donor")+forward_jct.boundary_dist("acceptor")
             reverse_dist = reverse_jct.boundary_dist("donor")+reverse_jct.boundary_dist("acceptor")
             
-            #This if statement is just checking a known case where forward and reverse matter
-            if (forward_jct.donor_sam.str_gene() == "NUP214" or 
-                    forward_jct.acceptor_sam.str_gene() == "NUP214" or
-                    reverse_jct.donor_sam.str_gene() == "NUP214" or
-                    reverse_jct.acceptor_sam.str_gene() == "NUP214"):
-                sys.stdout.write("Found a NUP214\n")
-                sys.stdout.write(forward_jct.verbose_fasta_string())
-                sys.stdout.write(str(forward_jct.donor_sam.gtf)+"\n")
-                sys.stdout.write(str(forward_jct.acceptor_sam.gtf)+"\n")
-                sys.stdout.write(reverse_jct.verbose_fasta_string())
-                sys.stdout.write(str(reverse_jct.donor_sam.gtf)+"\n")
-                sys.stdout.write(str(reverse_jct.acceptor_sam.gtf)+"\n")
-                sys.stdout.write("Forward dist: "+str(forward_dist)+" reverse_dist: "+str(reverse_dist)+"\n")
-                sys.stdout.write("Forward donor gtf span:"+str(forward_jct.donor_sam.gtf.span)+"\n")
-                sys.stdout.write("Forward acceptor gtf span:"+str(forward_jct.acceptor_sam.gtf.span)+"\n")
-                sys.stdout.write("Reverse donor gtf span:"+str(reverse_jct.donor_sam.gtf.span)+"\n")
-                sys.stdout.write("Reverse acceptor gtf span:"+str(reverse_jct.acceptor_sam.gtf.span)+"\n")
-                sys.stdout.write("\n")
-                sys.stdout.flush()
-
             if forward_dist < reverse_dist:
                 gtf_denovo_junctions.append(forward_jct)
             else:
@@ -449,6 +423,7 @@ for file_name in file_names:
 
         write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
         sys.stdout.write(str(len(denovo_junctions))+"\n")
+
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()
