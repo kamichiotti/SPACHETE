@@ -2,12 +2,13 @@
 
 #Imports
 from SPORK_SAMEntry import SAMEntry
+import copy
 import sys
 
 #Junction class
 class Junction(object):
     __slots__ = ["consensus","score","bin_pair","bin_pair_group","took_reverse_compliment","constants_dict",
-                 "upstream_sam","downstream_sam","jct_ind"]
+                 "donor_sam","acceptor_sam","jct_ind"]
 
     def __init__(self,consensus,score,bin_pair_group,took_reverse_compliment,constants_dict):
         """
@@ -32,8 +33,8 @@ class Junction(object):
         #Find chromosome, bin_pair and strand info from the first mapped read
         rep_bin_pair = self.bin_pair_group[0]
         self.bin_pair = rep_bin_pair.bin_pair
-        self.upstream_sam = SAMEntry()
-        self.downstream_sam = SAMEntry()
+        self.donor_sam = SAMEntry()
+        self.acceptor_sam = SAMEntry()
 
 
     #Use the sam's to find the splice index in reference to the concensus
@@ -44,14 +45,12 @@ class Junction(object):
             none
 
         Returns:
-            the 3' edge of the upstream sequence if both sams are defined
+            the 3' edge of the donor sequence if both sams are defined
             otherwise returns the middle index of the consensus as a guess
         """
-        if self.upstream_sam.exists and self.downstream_sam.exists:
-            #shouldn't have to do this anymore since I fixed the reads in splice utils
-            #donor_offset = int(self.upstream_sam.read_id.split("_")[-1])
-            #return donor_offset+len(self.upstream_sam.seq)
-            return len(self.upstream_sam.seq)
+        if self.donor_sam.exists and self.acceptor_sam.exists:
+            #NOTE currently doesn't handle gaps well (just returns the donor side index of gap)
+            return len(self.donor_sam.seq)
         else:
             return len(self.consensus)/2
 
@@ -59,49 +58,19 @@ class Junction(object):
     #Use the sam's again to find the size of the gap between the two pieces
     def splice_gap(self):
         """
-        Goal: Find the distance between the upstream and downstream splice sites
+        Goal: Find the distance between the donor and acceptor splice sites
               in consensus coordinates [0,len(consensus)-1]
         Arguments:
             none
 
         Returns:
-            the distance between the 3' end of the upstream and 5' end of the downstream
+            the distance between the 3' end of the donor and 5' end of the acceptor
             if one or both of the sam's are undefined return -1
         """
-        if self.upstream_sam.exists and self.downstream_sam.exists:
-            upstream_pos = self.consensus.index(self.upstream_sam.seq)+len(self.upstream_sam.seq)
-            downstream_pos = self.consensus.index(self.downstream_sam.seq)
-
-            upstream_pos = -1
-            downstream_pos = -1
-
-            #comp = {"A":"T","T":"A","C":"G","G":"C","N":"N"}
-            #rev_upstream_seq = "".join([comp[x] for x in self.upstream_sam.seq])[::-1]
-            #rev_downstream_seq = "".join([comp[x] for x in self.downstream_sam.seq])[::-1]
-
-            #don_seq = self.consensus[:self.splice_ind()]
-            #acc_seq = self.consensus[self.splice_ind():]
-            #sys.stderr.write(don_seq+"|"+acc_seq+"\n")
-            #sys.stderr.write(self.upstream_sam.seq+"\n")
-            #sys.stderr.write(rev_upstream_seq+"\n")
-            #sys.stderr.write(self.downstream_sam.seq+"\n")
-            #sys.stderr.write(rev_downstream_seq+"\n\n")
-            #Check if mapping needs to have rev comp for upstream
-            #if self.upstream_sam.seq in self.consensus:
-            #    upstream_pos = self.consensus.index(self.upstream_sam.seq)+len(self.upstream_sam.seq)
-            #else:
-            #    upstream_pos = self.consensus.index(rev_upstream_seq)+len(self.upstream_sam.seq)
-
-            #Check if mapping needs to have rev comp for downstream
-            #if self.downstream_sam.seq in self.consensus:
-            #    downstream_pos = self.consensus.index(self.downstream_sam.seq)
-            #else:
-            #    downstream_pos = self.consensus.index(rev_downstream_seq)
-            
-            #Return the difference (should be positive for linear)
-            return upstream_pos-downstream_pos
-
-        #If at least one of the two is undefined then just return -1
+        if self.donor_sam.exists and self.acceptor_sam.exists:
+            donor_pos = self.consensus.index(self.donor_sam.seq)+len(self.donor_sam.seq)
+            acceptor_pos = self.consensus.index(self.acceptor_sam.seq)
+            return donor_pos-acceptor_pos
         else:
             return None
 
@@ -114,12 +83,12 @@ class Junction(object):
             none
 
         Returns:
-            if both exist subtract the stop of the downstream
-            from the upstream start position (can be negative)
+            if both exist subtract the stop of the acceptor
+            from the donor start position (can be negative)
             if one or both don't exist just return -1
         """
-        if self.upstream_sam.exists and self.downstream_sam.exists:
-            return self.upstream_sam.start-self.downstream_sam.stop
+        if self.donor_sam.exists and self.acceptor_sam.exists:
+            return self.donor_sam.start-self.acceptor_sam.stop
         else:
             return -1
 
@@ -134,18 +103,18 @@ class Junction(object):
         Returns:
             "Full" if both sams exist and have zero gaps in the split
             "Gapped" if both sams exist but there is space in the middle
-            "Five_Only" if only the upstream sam exists
-            "Three_Only" if only the downstream sam exists
+            "Five_Only" if only the donor sam exists
+            "Three_Only" if only the acceptor sam exists
             "None" if niether sam exists
         """
-        if self.upstream_sam.exists and self.downstream_sam.exists:
+        if self.donor_sam.exists and self.acceptor_sam.exists:
             if self.splice_gap() == 0:
                 return "Full"
             else:
                 return "Gapped"
-        elif self.upstream_sam.exists:
+        elif self.donor_sam.exists:
             return "Five_Only"
-        elif self.downstream_sam.exists:
+        elif self.acceptor_sam.exists:
             return "Three_Only"
         else:
             return "None"
@@ -159,13 +128,13 @@ class Junction(object):
             none
 
         Returns:
-            bool of whether or not the upstream and downstream have different genes
+            bool of whether or not the donor and acceptor have different genes
             if one or more don't exists then return False
         """
-        if self.at_boundary("upstream") and self.at_boundary("downstream"):
-            if self.upstream_sam.chromosome != self.downstream_sam.chromosome:
+        if self.at_boundary("donor") and self.at_boundary("acceptor"):
+            if self.donor_sam.chromosome != self.acceptor_sam.chromosome:
                 return True
-            elif self.upstream_sam.strand != self.downstream_sam.strand:
+            elif self.donor_sam.strand != self.acceptor_sam.strand:
                 return True
             elif abs(self.span()) > span_cutoff:
                 return True
@@ -175,33 +144,36 @@ class Junction(object):
 
 
     #Get distance to closest splice boundary
-    def boundary_dist(self,stream):
+    def boundary_dist(self,splice_site):
         """
-        Goal: get the distance of the specified stream from the closest exon
+        Goal: get the distance of the specified splice site from the closest exon
         Arguments:
-            stream which is a string and can be either "upstream" or "downstream"
+            splice_site which is a string and can be either "donor" or "acceptor"
 
         Returns:
-            the min distance to any exon of the specified stream
-            if the specified stream is not specified, then returns -1
+            the min distance to any exon of the specified splice_site
+            if the specified splice_site is not specified, then returns -1
         """
-        sam = self.upstream_sam if stream == "upstream" else self.downstream_sam
-        if sam.gtf:
-            boundary_start = sam.gtf.start
-            boundary_stop = sam.gtf.stop
-            sam_pos = sam.stop if stream == "upstream" else sam.start
-            start_dist = abs(sam_pos-boundary_start)
-            stop_dist = abs(sam_pos-boundary_stop)
-            return min(start_dist,stop_dist)
+        #If donor distance is requested
+        if splice_site == "donor" and self.donor_sam.gtf:
+            donor_dist = abs(self.donor_sam.donor()-self.donor_sam.gtf.donor)
+            return donor_dist
+
+        #If acceptor distance is requested
+        elif splice_site == "acceptor" and self.acceptor_sam.gtf:
+            acceptor_dist = abs(self.acceptor_sam.acceptor()-self.acceptor_sam.gtf.acceptor)
+            return acceptor_dist
+
+        #If a different string was passed in or the specified gtf doesn't exist
         else:
             return -1
 
-    #Return whether or not an upstream and downstream is at a boundary
-    def at_boundary(self,stream,radius=8):
+    #Return whether or not an donor and acceptor is at a boundary
+    def at_boundary(self,splice_site):
         """
         Goal: check to see if the specified sam is at an exon boundary
         Arguments:
-            stream of type string. should be "upstream" or "downstream"
+            splice_site of type string. should be "donor" or "acceptor"
             to specify which sam to check
 
             radius is optional and signifies the maximum distance from
@@ -211,8 +183,8 @@ class Junction(object):
             a boolean of whether or not the specified sam is within
             'radius' distance of any exon boundary
         """
-        dist = self.boundary_dist(stream)
-        if 0 <= dist <= radius:
+        dist = self.boundary_dist(splice_site)
+        if 0 <= dist <= self.constants_dict["at_boundary_cutoff"]:
             return True
         else:
             return False
@@ -236,6 +208,42 @@ class Junction(object):
         linear = not linear if self.took_reverse_compliment else linear
         return linear
 
+    #Returns this junction and a reverse compliment of this junction
+    #to facilitate finding the gtf's of each and seeing which form is better
+    def yield_forward_and_reverse(self):
+        """
+        Goal: return a copy of self and a reverse compliment of self
+        Arguments:
+            none
+
+        Returns:
+            a tuple of Junction where the first entry is self and the
+            second is a reverse compliment of self
+        """
+        rev_self = copy.deepcopy(self)
+        rev_self.took_reverse_compliment = not rev_self.took_reverse_compliment
+
+        comp = {"A":"T","a":"t","T":"A","t":"a",
+                "G":"C","g":"c","C":"G","c":"g",
+                "N":"N","n":"n"}
+
+        #Take the reverse compliments of the seqs and switch them between donor and acceptor
+        rev_self.consensus = "".join([comp[base] for base in rev_self.consensus])[::-1]
+        rev_self.donor_sam.seq = "".join([comp[base] for base in self.donor_sam.seq])[::-1]
+        rev_self.acceptor_sam.seq = "".join([comp[base] for base in self.acceptor_sam.seq])[::-1]
+        rev_self.donor_sam.seq,rev_self.acceptor_sam.seq = rev_self.acceptor_sam.seq,rev_self.donor_sam.seq
+        
+        #Flip the strands of both SAMs
+        rev_self.donor_sam.strand = "-" if rev_self.donor_sam.strand == "+" else "+"
+        rev_self.acceptor_sam.strand = "-" if rev_self.acceptor_sam.strand == "+" else "+"
+
+        #Trade starts and stops of donor and acceptor and chromosome
+        rev_self.donor_sam.start,rev_self.acceptor_sam.start = rev_self.acceptor_sam.start,rev_self.donor_sam.start
+        rev_self.donor_sam.stop,rev_self.acceptor_sam.stop = rev_self.acceptor_sam.stop,rev_self.donor_sam.stop
+        rev_self.donor_sam.chromosome,rev_self.acceptor_sam.chromosome = rev_self.acceptor_sam.chromosome,rev_self.donor_sam.chromosome
+
+        return self,rev_self
+
     #Format the junction for MACHETE in fasta form
     #NOTE only call this function on 'fusion' identified junctions
     def fasta_MACHETE(self):
@@ -247,14 +255,14 @@ class Junction(object):
             a fasta formatted string (with a newline between header and sequence)
         """
         #Make the necessary variables
-        chrom1 = self.upstream_sam.chromosome
-        chrom2 = self.downstream_sam.chromosome
-        genes1 = self.upstream_sam.str_gene()
-        genes2 = self.downstream_sam.str_gene()
-        pos1 = self.upstream_sam.stop
-        pos2 = self.downstream_sam.start
-        strand1 = self.upstream_sam.strand
-        strand2 = self.downstream_sam.strand
+        chrom1 = self.donor_sam.chromosome
+        chrom2 = self.acceptor_sam.chromosome
+        genes1 = self.donor_sam.str_gene()
+        genes2 = self.acceptor_sam.str_gene()
+        pos1 = self.donor_sam.donor()
+        pos2 = self.acceptor_sam.acceptor()
+        strand1 = self.donor_sam.strand
+        strand2 = self.acceptor_sam.strand
         fusion = "fusion" if self.check_fusion() else "no_fusion"
 
         #Start building the fasta string
@@ -288,21 +296,21 @@ class Junction(object):
             a fasta formatted string (with a newline between header and sequence)
         """
         fasta_str = ""
-        fasta_str += ">|"+str(self.upstream_sam.chromosome)+"|"
-        fasta_str += str(self.upstream_sam.str_gene())+"|"
-        fasta_str += str(self.upstream_sam.start)+"-"
-        fasta_str += str(self.upstream_sam.stop)+"|"
-        fasta_str += "strand1:"+str(self.upstream_sam.strand)+"|"
-        fasta_str += "boundary_dist1:"+str(self.boundary_dist("upstream"))+"|"
-        fasta_str += "at_boundary1:"+str(self.at_boundary("upstream"))+"|_"
+        fasta_str += ">|"+str(self.donor_sam.chromosome)+"|"
+        fasta_str += str(self.donor_sam.str_gene())+"|"
+        fasta_str += str(self.donor_sam.start)+"-"
+        fasta_str += str(self.donor_sam.stop)+"|"
+        fasta_str += "strand1:"+str(self.donor_sam.strand)+"|"
+        fasta_str += "boundary_dist1:"+str(self.boundary_dist("donor"))+"|"
+        fasta_str += "at_boundary1:"+str(self.at_boundary("donor"))+"|_"
 
-        fasta_str += "|"+str(self.downstream_sam.chromosome)+"|"
-        fasta_str += str(self.downstream_sam.str_gene())+"|"
-        fasta_str += str(self.downstream_sam.start)+"-"
-        fasta_str += str(self.downstream_sam.stop)+"|"
-        fasta_str += "strand2:"+str(self.downstream_sam.strand)+"|"
-        fasta_str += "boundary_dist2:"+str(self.boundary_dist("downstream"))+"|"
-        fasta_str += "at_boundary2:"+str(self.at_boundary("downstream"))+"|_"
+        fasta_str += "|"+str(self.acceptor_sam.chromosome)+"|"
+        fasta_str += str(self.acceptor_sam.str_gene())+"|"
+        fasta_str += str(self.acceptor_sam.start)+"-"
+        fasta_str += str(self.acceptor_sam.stop)+"|"
+        fasta_str += "strand2:"+str(self.acceptor_sam.strand)+"|"
+        fasta_str += "boundary_dist2:"+str(self.boundary_dist("acceptor"))+"|"
+        fasta_str += "at_boundary2:"+str(self.at_boundary("acceptor"))+"|_"
 
         fasta_str += "|splice:"+str(self.splice_ind())+"|"
         fasta_str += "score:"+str(self.score)+"|"
@@ -314,12 +322,12 @@ class Junction(object):
         splice_flank_len = int(self.constants_dict["splice_flank_len"])
         full_consensus = self.format_consensus(splice_flank_len)
         fasta_str += str(full_consensus)+"\n"
-        fasta_str += str(self.upstream_sam.seq)+"\n"
-        fasta_str += " "*self.splice_ind()+str(self.downstream_sam.seq)+"\n"
+        fasta_str += str(self.donor_sam.seq)+"\n"
+        fasta_str += " "*self.splice_ind()+str(self.acceptor_sam.seq)+"\n"
 
         #Also printing out gtf information
-        #fasta_str += "Upstream_gtf:"+str(self.upstream_sam.gtf)+"\n"
-        #fasta_str += "Downstream_gtf:"+str(self.downstream_sam.gtf)+"\n"
+        #fasta_str += "Donor_gtf:"+str(self.donor_sam.gtf)+"\n"
+        #fasta_str += "Acceptor_gtf:"+str(self.acceptor_sam.gtf)+"\n"
         return fasta_str
 
 
@@ -334,21 +342,21 @@ class Junction(object):
             a fasta string (with a newline between the header and sequence)
         """
         fasta_str = ""
-        fasta_str += ">|chromosome1:"+str(self.upstream_sam.chromosome)+"|"
-        fasta_str += "genes1:"+str(self.upstream_sam.str_gene())+"|"
-        fasta_str += "start1:"+str(self.upstream_sam.start)+"|"
-        fasta_str += "stop1:"+str(self.upstream_sam.stop)+"|"
-        fasta_str += "strand1:"+str(self.upstream_sam.strand)+"|"
-        fasta_str += "boundary_dist1:"+str(self.boundary_dist("upstream"))+"|"
-        fasta_str += "at_boundary1:"+str(self.at_boundary("upstream"))+"|_"
+        fasta_str += ">|chromosome1:"+str(self.donor_sam.chromosome)+"|"
+        fasta_str += "genes1:"+str(self.donor_sam.str_gene())+"|"
+        fasta_str += "start1:"+str(self.donor_sam.start)+"|"
+        fasta_str += "stop1:"+str(self.donor_sam.stop)+"|"
+        fasta_str += "strand1:"+str(self.donor_sam.strand)+"|"
+        fasta_str += "boundary_dist1:"+str(self.boundary_dist("donor"))+"|"
+        fasta_str += "at_boundary1:"+str(self.at_boundary("donor"))+"|_"
 
-        fasta_str += "|chromosome2:"+str(self.downstream_sam.chromosome)+"|"
-        fasta_str += "genes2:"+str(self.downstream_sam.str_gene())+"|"
-        fasta_str += "start2:"+str(self.downstream_sam.start)+"|"
-        fasta_str += "stop2:"+str(self.downstream_sam.stop)+"|"
-        fasta_str += "strand2:"+str(self.downstream_sam.strand)+"|"
-        fasta_str += "boundary_dist2:"+str(self.boundary_dist("downstream"))+"|"
-        fasta_str += "at_boundary2:"+str(self.at_boundary("downstream"))+"|_|"
+        fasta_str += "|chromosome2:"+str(self.acceptor_sam.chromosome)+"|"
+        fasta_str += "genes2:"+str(self.acceptor_sam.str_gene())+"|"
+        fasta_str += "start2:"+str(self.acceptor_sam.start)+"|"
+        fasta_str += "stop2:"+str(self.acceptor_sam.stop)+"|"
+        fasta_str += "strand2:"+str(self.acceptor_sam.strand)+"|"
+        fasta_str += "boundary_dist2:"+str(self.boundary_dist("acceptor"))+"|"
+        fasta_str += "at_boundary2:"+str(self.at_boundary("acceptor"))+"|_|"
 
         fasta_str += "splice:"+str(self.splice_ind())+"|"
         fasta_str += "span:"+str(self.span())+"|"
@@ -399,12 +407,12 @@ class Junction(object):
         """
         read_ids = []
         for bin_pair in self.bin_pair_group:
-            upstream_id = bin_pair.five_prime_SAM.read_id.replace("/5_prime","")
-            downstream_id = bin_pair.five_prime_SAM.read_id.replace("/3_prime","")
-            if upstream_id == downstream_id:
-                read_ids.append(upstream_id)
+            donor_id = bin_pair.five_prime_SAM.read_id.replace("/5_prime","")
+            acceptor_id = bin_pair.five_prime_SAM.read_id.replace("/3_prime","")
+            if donor_id == acceptor_id:
+                read_ids.append(donor_id)
             else:
-                sys.stderr.write("ERROR, nonmatching ids in jct: ["+upstream_id+"] vs ["+downstream_id+"]\n")
+                sys.stderr.write("ERROR, nonmatching ids in jct: ["+donor_id+"] vs ["+acceptor_id+"]\n")
                 sys.exit(1)
 
         return read_ids
@@ -422,15 +430,15 @@ class Junction(object):
         out_str = ""
         out_str += "Junction with bin pair ["+self.bin_pair+"] with ["+str(len(self.bin_pair_group))+"] reads mapped\n"
         out_str += "Linear " if self.linear() else "Non-Linear "
-        out_str += "Upstream on the "+str(self.upstream_sam.strand)+" strand and downstream on the "+str(self.downstream_sam.strand)+"\n"
-        out_str += "5' map position ["+str(self.upstream_sam.start)+"-"+str(self.upstream_sam.stop)+"]\n"
-        out_str += "3' map position ["+str(self.downstream_sam.start)+"-"+str(self.downstream_sam.stop)+"]\n"
-        out_str += "Consensus with score ["+str(self.score)+"] and upstream splice site ["+str(self.upstream_sam.stop)+"]:\n"
+        out_str += "Donor on the "+str(self.donor_sam.strand)+" strand and acceptor on the "+str(self.acceptor_sam.strand)+"\n"
+        out_str += "5' map position ["+str(self.donor_sam.start)+"-"+str(self.donor_sam.stop)+"]\n"
+        out_str += "3' map position ["+str(self.acceptor_sam.start)+"-"+str(self.acceptor_sam.stop)+"]\n"
+        out_str += "Consensus with score ["+str(self.score)+"] and donor splice site ["+str(self.donor_sam.stop)+"]:\n"
         out_str += str(self.consensus)+"\n"
-        out_str += str(self.upstream_sam.seq)+"\n"
-        out_str += " "*len(str(self.upstream_sam.seq))+str(self.downstream_sam.seq)+"\n"
-        out_str += "Upstream genes ["+str(self.upstream_sam.str_gene())+"]\n"
-        out_str += "Downstream genes ["+str(self.downstream_sam.str_gene())+"]\n"
+        out_str += str(self.donor_sam.seq)+"\n"
+        out_str += " "*len(str(self.donor_sam.seq))+str(self.acceptor_sam.seq)+"\n"
+        out_str += "Donor genes ["+str(self.donor_sam.str_gene())+"]\n"
+        out_str += "Acceptor genes ["+str(self.acceptor_sam.str_gene())+"]\n"
         return out_str
 
     #Rank junctions in order of bin_pairs when sorted

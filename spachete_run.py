@@ -251,6 +251,8 @@ sys.stdout.write(spork_out)
 sys.stderr.write(spork_err)
 write_time("Run spork",start_time,timer_file_path)
 
+#NOTE!!!NOTE stopping execution after SPORK for debugging
+#sys.exit(1)
 
 #Make the bowtie index building call on the spork fasta
 start_time = time.time()

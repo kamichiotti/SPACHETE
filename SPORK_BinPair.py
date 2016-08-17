@@ -5,9 +5,9 @@ class BinPair(object):
 
     def __init__(self,five_prime_SAM,three_prime_SAM,five_prime_bin,three_prime_bin):
         """
-        Goal: 
+        Goal: setup a BinPair object
         Arguments:
-            
+            a 5' SAMEntry object, a 3' SAMEntry object, and a bin from each (bins are ints)
 
         Returns:
             nothing
@@ -49,18 +49,16 @@ class BinPair(object):
     #
     #So the 5' box got the orig 3' positions and should have the rev comp seq of the orig 3' seq
     #the same thing happens to the 3' box
-    #TODO I should really test that this is working properly w/ unittests
     def take_reverse_compliment(self):
         """
-        Goal: 
+        Goal: take the reverse compliment of this bin pair
         Arguments:
-            
+            none
 
         Returns:
-            nothing
+            itself for use in list comprehensions
         """
-        #Swap the strand both in the underlying SAMs and the other members
-        #TODO make the members actually just call the underlying SAMs each time
+        #Switch all the strands
         self.five_prime_SAM.strand = "-" if self.five_prime_SAM.strand == "+" else "+"
         self.three_prime_SAM.strand = "-" if self.three_prime_SAM.strand == "+" else "+"
         self.five_prime_strand = "-" if self.five_prime_strand == "+" else "+"
@@ -99,23 +97,23 @@ class BinPair(object):
 
     def __str__(self):
         """
-        Goal: 
+        Goal: make this object into a string for easy printing
         Arguments:
-            
+            none
 
         Returns:
-            nothing
+            a string representation of a bin pair
         """
         return "Bin Pair: "+self.bin_pair+" Left: "+self.five_prime_SAM.read_id+" Right: "+self.three_prime_SAM.read_id+"\n"
 
     def __lt__(self,other):
         """
-        Goal: 
+        Goal: allow comparison between two binpair objects
         Arguments:
-            
+            other is a binpair object just like self
 
         Returns:
-            nothing
+            true if the bin_pair string of self is less than that of other
         """
         return self.bin_pair < other.bin_pair
 

@@ -1,3 +1,4 @@
+#Import sys to write to sys.stderr sometimes
 import sys
 
 #Mapped Read class
@@ -7,9 +8,11 @@ class SAMEntry(object):
 
     def __init__(self,full_line = None):
         """
-        Goal: 
+        Goal: initialize a SAMEntry object
         Arguments:
-            
+            can take in a full sam line (which it then parses),
+            or nothing, in which case a "null" SAMEntry is created
+            with None for every member
 
         Returns:
             nothing
@@ -70,14 +73,38 @@ class SAMEntry(object):
             self.stop = self.start+len(self.seq)
             self.gtf = None
 
-    def str_gene(self):
+    def donor(self):
         """
-        Goal: 
+        Goal: return the donor position of the SAMEntry
         Arguments:
-            
+            none
 
         Returns:
-            nothing
+            The donor position as an integer
+        """
+        don = self.stop if self.strand == "+" else self.start
+        return don
+
+    def acceptor(self):
+        """
+        Goal: return the acceptor position of the SAMEntry
+        Arguments:
+            none
+
+        Returns:
+            The acceptor position as an integer
+        """
+        acc = self.start if self.strand == "+" else self.stop
+        return acc
+
+    def str_gene(self):
+        """
+        Goal: return the gene name associated with this SAMEntry
+        Arguments:
+            none
+
+        Returns:
+            None in string form if no gene, or the gene name in string form
         """
         if self.gtf:
             return str(self.gtf.gene_name)
@@ -86,12 +113,12 @@ class SAMEntry(object):
 
     def junction(self):
         """
-        Goal: 
+        Goal: get a string of SAMEntry that looks similar to junction fasta headers
         Arguments:
-            
+            none
 
         Returns:
-            nothing
+            a string of this SAMEntry
         """
         out_str = ""
         out_str += "jct|"+self.chromosome.split("|")[1] if "|" in self.chromosome else self.chromosome
@@ -102,12 +129,12 @@ class SAMEntry(object):
 
     def __str__(self):
         """
-        Goal: 
+        Goal: get a human friendly string representation of SAMEntry
         Arguments:
-            
+            none
 
         Returns:
-            nothing
+            a string of important information of self
         """
         ret_str = ""
         ret_str += str(self.read_id)+"\t"
@@ -119,12 +146,13 @@ class SAMEntry(object):
 
     def __lt__(self,other):
         """
-        Goal: 
+        Goal: allow comparison between SAMEntries for sorting
         Arguments:
-            
+            other is of type SAMEntry as well
 
         Returns:
-            nothing
+            true if self is on a smaller chromosome, or has a smaller
+            start if chromosomes are shared, otherwise false
         """
         same_chr = self.chromosome == other.chromosome
         if not same_chr:
@@ -132,27 +160,4 @@ class SAMEntry(object):
         else:
             return self.start < other.start
 
-    def save(obj):
-        """
-        Goal: 
-        Arguments:
-            
-
-        Returns:
-            nothing
-        """
-        return (obj.__class__, obj.__dict__)
-
-    def load(cls, attributes):
-        """
-        Goal: 
-        Arguments:
-            
-
-        Returns:
-            nothing
-        """
-        obj = cls.__new__(cls)
-        obj.__dict__.update(attributes)
-        return obj
 

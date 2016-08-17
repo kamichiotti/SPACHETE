@@ -34,8 +34,8 @@
 #    CML UConn samples      #
 #############################
 KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_8_12_16/"
-#STEM_INCLUDE_ONLY_LIST=("SRR3192409")
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test/"
+STEM_INCLUDE_ONLY_LIST=("SRR3192410")
 
 #############################
 #     CML test samples      #
@@ -47,7 +47,7 @@ OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_8_12_16/"
 #    Normal breast samples      #
 #################################
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/normal_breast"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_8_15"
 
 ######################################
 #    Simulated engstrom samples      #
@@ -59,7 +59,18 @@ OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_8_12_16/"
 #    Normal fetal samples      #
 ################################
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/normal_fetal"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_15"
+#STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"
+#                        "Fetal_Adrenal_403b_GTCCGC_L008"
+#                        "Fetal_Adrenal_408_CGATGT_L008"
+#                        "Fetal_Adrenal_419_TGACCA_L008"
+#                        "Fetal_Brain_408_AGTCAA_L006"
+#                        "Fetal_Heart_361_TGACCA_L007"
+#                        "Fetal_Heart_365_ACAGTG_L007"
+#                        "Fetal_Intestine_395_CGATGT_L005"
+#                        "Fetal_Lung_384_CTTGTA_L007"
+#                        "Fetal_Stomach_360_ACAGTG_L008"
+#                        "Fetal_Stomach_401_GTCCGC_L006")
 
 ################################
 #        Bladder samples       #

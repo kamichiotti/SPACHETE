@@ -81,6 +81,8 @@ if not mode:
 bin_size = 50                           #size of bins in bps to split ref into
 group_member_cutoff = 2                 #minimum number of reads that need to map to a bin pair
 consensus_score_cutoff = 0.5            #relates to the number of mismatches in consensus
+span_cutoff = 1e6                       #minimum span distance to be classified a "fusion"
+at_boundary_cutoff = 15                 #maximum distance to be away from a boundary for fusion classification
 collapse_thresh = 5                     #distance used in the collapse junctions step
 min_bases_per_col = 2                   #only consider column if it has at least n bases
 read_gap_score = "--rdg 50,50"          #read gap set to be very high to not allow gaps
@@ -88,7 +90,7 @@ ref_gap_score = "--rfg 50,50"           #read gap set to be very high to not all
 min_score = "--score-min L,0,-0.10"     #minimum allowed Bowtie2 score
 allowed_mappings = "1"                  #allowed mappings of a given read. Currently not implemented
 
-thirds_len = 30                         #length to cut the original reads into for the 5' and 3' pieces:
+thirds_len = 36                         #length to cut the original reads into for the 5' and 3' pieces:
                                         #   |-------|---------------|-------|
                                         #       ^     unused middle     ^
                                         #       |                       |
@@ -154,7 +156,8 @@ constants_dict = {"input_dir":input_dir,"mode":mode,"splice_flank_len":splice_fl
                   "splice_finding_min_score":splice_finding_min_score,"read_gap_score":read_gap_score,"min_bases_per_col":min_bases_per_col,
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
                   "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,"use_prior":use_prior,
-                  "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf_path":gtf_path,"collapse_thresh":collapse_thresh}
+                  "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf_path":gtf_path,"collapse_thresh":collapse_thresh,
+                  "at_boundary_cutoff":at_boundary_cutoff,"span_cutoff":span_cutoff}
 
 ###################################
 # Loop through each R1 input file #
@@ -375,9 +378,56 @@ for file_name in file_names:
         write_time("-Time to find splice indices ",start_find_splice_inds,timer_file_path)
 
         # Get GTF information for the identified denovo_junctions
+        # NOTE currently trying forward and rev-comp junction to see which one is closer to gtfs
         start_get_jct_gtf_info = time.time()
-        get_jct_gtf_info(denovo_junctions,gtfs,constants_dict)
-        write_time("Time to get jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
+        forward_jcts = []
+        reverse_jcts = []
+        for jct in denovo_junctions:
+            forward_jct,reverse_jct = jct.yield_forward_and_reverse()
+            forward_jcts.append(forward_jct)
+            reverse_jcts.append(reverse_jct)
+        
+        start_time = time.time()
+        get_jct_gtf_info(forward_jcts,gtfs,constants_dict)
+        write_time("Time to get jct gtf info 1 "+R_file_name,start_time,timer_file_path)
+        
+        start_time = time.time()
+        get_jct_gtf_info(reverse_jcts,gtfs,constants_dict)
+        write_time("Time to get jct gtf info 2 "+R_file_name,start_time,timer_file_path)
+        
+        gtf_denovo_junctions = []
+        for jct_ind in range(len(denovo_junctions)):
+            forward_jct = forward_jcts[jct_ind]
+            reverse_jct = reverse_jcts[jct_ind]
+
+            forward_dist = forward_jct.boundary_dist("donor")+forward_jct.boundary_dist("acceptor")
+            reverse_dist = reverse_jct.boundary_dist("donor")+reverse_jct.boundary_dist("acceptor")
+            
+            if (forward_jct.donor_sam.str_gene() == "NUP214" or 
+                    forward_jct.acceptor_sam.str_gene() == "NUP214" or
+                    reverse_jct.donor_sam.str_gene() == "NUP214" or
+                    reverse_jct.acceptor_sam.str_gene() == "NUP214"):
+                sys.stdout.write("Found a NUP214\n")
+                sys.stdout.write(forward_jct.verbose_fasta_string())
+                sys.stdout.write(str(forward_jct.donor_sam.gtf)+"\n")
+                sys.stdout.write(str(forward_jct.acceptor_sam.gtf)+"\n")
+                sys.stdout.write(reverse_jct.verbose_fasta_string())
+                sys.stdout.write(str(reverse_jct.donor_sam.gtf)+"\n")
+                sys.stdout.write(str(reverse_jct.acceptor_sam.gtf)+"\n")
+                sys.stdout.write("Forward dist: "+str(forward_dist)+" reverse_dist: "+str(reverse_dist)+"\n")
+                sys.stdout.write("Forward donor gtf span:"+str(forward_jct.donor_sam.gtf.span)+"\n")
+                sys.stdout.write("Forward acceptor gtf span:"+str(forward_jct.acceptor_sam.gtf.span)+"\n")
+                sys.stdout.write("Reverse donor gtf span:"+str(reverse_jct.donor_sam.gtf.span)+"\n")
+                sys.stdout.write("Reverse acceptor gtf span:"+str(reverse_jct.acceptor_sam.gtf.span)+"\n")
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+
+            if forward_dist < reverse_dist:
+                gtf_denovo_junctions.append(forward_jct)
+            else:
+                gtf_denovo_junctions.append(reverse_jct)
+
+        write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
         sys.stdout.write(str(len(denovo_junctions))+"\n")
 
         """
@@ -390,6 +440,7 @@ for file_name in file_names:
             machete_style_file.write(denovo_junction.fasta_MACHETE())
         machete_style_file.close()
         write_time("-Time to write pre-collapse junctions ",start_write_pre_collapsed,timer_file_path)
+        """
  
         # Collapse the junctions that have the same splice site
         start_collapse_junctions = time.time()
@@ -398,11 +449,10 @@ for file_name in file_names:
         sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
         denovo_junctions = singular_jcts+collapsed_jcts
         write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
-        """
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()
-        fusion_junctions = identify_fusions(denovo_junctions)
+        fusion_junctions = identify_fusions(denovo_junctions,constants_dict)
         sys.stderr.write("Len fusion jcts = "+str(len(fusion_junctions))+"\n")
         write_time("Time to identify fusions "+R_file_name,start_identify_fusions,timer_file_path)
 

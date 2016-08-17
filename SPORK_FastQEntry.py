@@ -1,5 +1,4 @@
 #Fastq entry class
-#TODO better document this class
 
 #Imports
 import sys
@@ -43,14 +42,14 @@ class FastQEntry(object):
 
         return five_prime_read,three_prime_read
 
-    def get_first_last_n(self,third_len=30):
+    def get_first_last_n(self,third_len=36):
         """
         Goal: very similar to the edge 
         Arguments:
-            
+            optional length of n to take (defaulted at 36)
 
         Returns:
-            nothing
+            a tuple of 5' and 3' FastQEntry objects
         """
         #Check to make sure can at least get the first and last third in length
         if len(self.seq) <= third_len*2:

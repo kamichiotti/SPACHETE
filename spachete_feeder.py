@@ -157,6 +157,7 @@ with open(FullStemFile,"r") as stem_file:
         out_files.append(machete_out)
         err_files.append(machete_err)
 
+        """
         #Sending jobs to the SLURM scheduler (comment out if not on SLURM)
         job_name = stem[-5:] #annoying that the full job name doesn't show
         slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
@@ -167,12 +168,11 @@ with open(FullStemFile,"r") as stem_file:
             sub_SLURM.write("#!/bin/bash\n")
             sub_SLURM.write("python "+os.path.join(MACHETE,"spachete_run.py")+OPTIONS+"\n")
 
-        subprocess.call(["sbatch","-p","owners","--mem=59000","--time=10:00:00",
+        subprocess.call(["sbatch","-p","horence","--mem=20000","--time=5:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
-
-
         """
+
         #This is for multithreading w/out submitting a SLURM job (comment out if on SLURM)
         processes.append(subprocess.Popen(["python",os.path.join(MACHETE,"spachete_run.py"),
                                            "--circpipe-dir",CIRCPIPE_DIR,
@@ -182,7 +182,6 @@ with open(FullStemFile,"r") as stem_file:
                                            "--circref-dir",CIRCREF],
                                            stdout=machete_out,stderr=machete_err))
 
-        """
 
 #Force all the jobs to complete before exiting
 for p_ind in range(len(processes)):

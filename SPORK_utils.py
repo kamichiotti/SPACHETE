@@ -166,10 +166,14 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
         mapped_reads = [member.five_prime_SAM for member in group_members]
         bin_consensus,bin_score = build_and_score_consensus(mapped_reads,five_prime_strand,id_to_seq,bin_size,constants_dict)
 
-        # TODO what do I do if the five and three prime strands are not the same?
+        # TODO what do I do if the five and three prime strands are not the same? (this represents a translocation)
         # If the reverse compliment was taken above then take the rev compliment of the consensus too
+        # NOTE currently just taking reverse compliment whenever the 5' strand is negative to help groupings
+        #   i.e. if have 5' - and 3' + of a jct and 5' + and 3' - of the same jct, they should be collapsed, but won't be
+        #   unless I implement this
         took_reverse_compliment = False
-        if five_prime_strand == "-" and three_prime_strand == "-":
+        #if five_prime_strand == "-" and three_prime_strand == "-":
+        if five_prime_strand == "-":
             group_members = [member.take_reverse_compliment() for member in group_members]
             bin_consensus = reverse_compliment(bin_consensus)
             took_reverse_compliment = True
@@ -191,7 +195,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
 # Returns a dict keyed by jct_id and valued by a list of cut sites
 def find_splice_inds(denovo_junctions,constants_dict):
     """
-    Goal: find where in the consensus sequence to make and upstream and downstream cut
+    Goal: find where in the consensus sequence to make and donor and acceptor cut
     Arguments:
         denovo_junctions is a list[Junction]
         the constants_dict is a dictionary of global constants
@@ -284,11 +288,6 @@ def find_splice_inds(denovo_junctions,constants_dict):
         sys.stdout.flush()
         five_sam_entry = SAMEntry(five_sam_line)
         three_sam_entry = SAMEntry(three_sam_line)
-        #If a sam maps to the minus strand, switch it's start and stop position
-        if five_sam_entry.strand == "-":
-            five_sam_entry.start,five_sam_entry.stop = [five_sam_entry.stop,five_sam_entry.start]
-        if three_sam_entry.strand == "-":
-            three_sam_entry.start,three_sam_entry.stop = [three_sam_entry.stop,three_sam_entry.start]
         
         five_jct_ind = int(five_sam_entry.read_id.split("_")[1])
         three_jct_ind = int(three_sam_entry.read_id.split("_")[1])
@@ -340,35 +339,35 @@ def find_splice_inds(denovo_junctions,constants_dict):
         jct = denovo_junctions[jct_ind]
 
         # Use calculted best splice if was previously found and both the
-        # upstream and downstream elements exist
+        # donor and acceptor elements exist
         if jct_ind in best_splices and all([sam.exists for sam in best_splices[jct_ind]]):
-            upstream_sam,downstream_sam = best_splices[jct_ind]
+            donor_sam,acceptor_sam = best_splices[jct_ind]
 
             #Need to include the donor seq not used in splitting
             #gets complicated by + and - strand
-            upstream_ind = int(upstream_sam.read_id.split("_ind_")[1])
-            upstream_len = len(upstream_sam.seq)
-            up_remaining = jct.consensus[:upstream_ind]
-            if upstream_sam.strand == "+":
-                upstream_sam.seq = up_remaining+upstream_sam.seq
-                upstream_sam.start -= len(up_remaining)
-            elif upstream_sam.strand == "-":
-                upstream_sam.seq = up_remaining+reverse_compliment(upstream_sam.seq)
-                upstream_sam.start += len(up_remaining)
-            jct.upstream_sam = upstream_sam
+            donor_ind = int(donor_sam.read_id.split("_ind_")[1])
+            donor_len = len(donor_sam.seq)
+            up_remaining = jct.consensus[:donor_ind]
+            if donor_sam.strand == "+":
+                donor_sam.seq = up_remaining+donor_sam.seq
+                donor_sam.start -= len(up_remaining)
+            elif donor_sam.strand == "-":
+                donor_sam.seq = up_remaining+reverse_compliment(donor_sam.seq)
+                donor_sam.start += len(up_remaining)
+            jct.donor_sam = donor_sam
 
             #Need to include the acceptor seq not used in splitting
             #gets complicated by + and - strand
-            downstream_ind = int(downstream_sam.read_id.split("_ind_")[1])
-            downstream_len = len(downstream_sam.seq)
-            down_remaining = jct.consensus[downstream_ind+2*downstream_len:]
-            if downstream_sam.strand == "+":
-                downstream_sam.seq = downstream_sam.seq+down_remaining
-                downstream_sam.stop += len(down_remaining)
-            elif downstream_sam.strand == "-":
-                downstream_sam.seq = reverse_compliment(downstream_sam.seq)+down_remaining
-                downstream_sam.stop -= len(down_remaining)
-            jct.downstream_sam = downstream_sam
+            acceptor_ind = int(acceptor_sam.read_id.split("_ind_")[1])
+            acceptor_len = len(acceptor_sam.seq)
+            down_remaining = jct.consensus[acceptor_ind+2*acceptor_len:]
+            if acceptor_sam.strand == "+":
+                acceptor_sam.seq = acceptor_sam.seq+down_remaining
+                acceptor_sam.stop += len(down_remaining)
+            elif acceptor_sam.strand == "-":
+                acceptor_sam.seq = reverse_compliment(acceptor_sam.seq)+down_remaining
+                acceptor_sam.stop -= len(down_remaining)
+            jct.acceptor_sam = acceptor_sam
  
             jcts_with_splice.append(jct)
 
@@ -447,11 +446,12 @@ def get_best_splice(sam_five_list,sam_three_list,consensus,max_mismatches):
 #   Generate GTFS   #
 #####################
 # Helper function to generate a list of gtf objects from a gtf path full of gtf files
-def generate_gtfs(gtf_path):
+def generate_gtfs(gtf_path,allowed_feature_types=["exon"]):
     """
     Goal: open all the gtf_files and put all gtf objects in a list from the given path
     Arguments:
-        gtf_file_name is the full path to the gtf file
+        gtf_file_name is the full path to the gtf files
+        allowed_feature_types is a list of string specifiying which feature types to add (default 'exon' only)
 
     Returns:
         gtfs is a list[GTFEntry]
@@ -460,60 +460,104 @@ def generate_gtfs(gtf_path):
     gtf_file_names = [gtf_name for gtf_name in os.listdir(gtf_path) if "gtf" in gtf_name]
     for gtf_file_name in gtf_file_names:
         abs_gtf_file_path = os.path.join(gtf_path,gtf_file_name)
-        sys.stdout.write("Opening GTF file "+abs_gtf_file_path+"\n")
+        sys.stdout.write("Reading in GTF file "+abs_gtf_file_path+"\n")
         with open(abs_gtf_file_path,"r") as gtf_file:
             for gtf_line in gtf_file.readlines():
                 gtf = GTFEntry(gtf_line)
-                gtfs.append(gtf)
+                if gtf.feature in allowed_feature_types:
+                    gtfs.append(gtf)
 
     return gtfs
 
+########################
+#   Get JCT GTF info   #
+########################
+def get_jct_gtf_info(junctions,gtfs,constants_dict):
+    """
+    Goal: for each junction find the closest gtf for donor and acceptor
+    Arguments:
+        junctions is a list[Junction]
+        gtfs is a list[GTF]
+
+    Returns:
+        nothing (just updates the junction objects as pass-by-reference)
+    """
+    # Separate the gtfs by chromosome into a dictionary
+    chrom_gtfs = {}
+    for gtf in gtfs:
+        if gtf.chromosome not in chrom_gtfs:
+            chrom_gtfs[gtf.chromosome] = [gtf]
+        else:
+            chrom_gtfs[gtf.chromosome].append(gtf)
+
+    # Pre sort the gtfs into a donor and acceptor oriented list by chromosome
+    chrom_gtfs_don = {}
+    chrom_gtfs_acc = {}
+    chrom_don_libs = {}
+    chrom_acc_libs = {}
+    for chrom in chrom_gtfs:
+        chrom_gtfs_don[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.donor)
+        chrom_gtfs_acc[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.acceptor)
+        chrom_don_libs[chrom] = [gtf.donor for gtf in chrom_gtfs_don[chrom]]
+        chrom_acc_libs[chrom] = [gtf.acceptor for gtf in chrom_gtfs_acc[chrom]]
+
+    # Find the closest gtfs to donor and acceptor
+    for junction in junctions:
+        jct_ind = junctions.index(junction)
+        closest_results = find_closest_gtf(junction,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_libs)
+        if closest_results["donor"]:
+            gtf = closest_results["donor"]
+            junction.donor_sam.gtf = gtf
+            
+        if closest_results["acceptor"]:
+            gtf = closest_results["acceptor"]
+            junction.acceptor_sam.gtf = gtf
+            
 
 #################################
-#   Search Closest GTF wrapper  #
+#        Find Closest GTF       #
 #################################
-def find_closest_gtf(jct,chrom_gtfs_start,chrom_gtfs_stop,chrom_start_libs,chrom_stop_libs):
+def find_closest_gtf(jct,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_libs):
     """
-    Goal: make it easier to call find closest gtf of upstream and downstream w/out code duplication
+    Goal: make it easier to call find closest gtf of donor and acceptor w/out code duplication
     Arguments:
         takes in a single junction
-        takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by start
-        takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by stop
+        takes in chrom_gtfs_don which is a dict["chrom":list[GTFEntry]] sorted by donor
+        takes in chrom_gtfs_acc which is a dict["chrom":list[GTFEntry]] sorted by acceptor
 
     Returns:
         closest_results which is a dictionary keyed by
-        -> closest_results["upstream"] -> GTFEntry
-        -> closest_results["downstream"] -> GTFEntry
+        -> closest_results["donor"] -> GTFEntry
+        -> closest_results["acceptor"] -> GTFEntry
     """
-    closest_results = {"upstream":None,"downstream":None}
+    closest_results = {"donor":None,"acceptor":None}
 
-    #Find the closest upstream sam gtf checking start and stop of the gtfs
-    if jct.upstream_sam.exists:
-        query = jct.upstream_sam.stop
-        chrom = jct.upstream_sam.chromosome
-        if chrom in chrom_gtfs_start and chrom in chrom_gtfs_stop and chrom in chrom_start_libs and chrom in chrom_stop_libs:
-            gtfs_start = chrom_gtfs_start[chrom]
-            gtfs_stop = chrom_gtfs_stop[chrom]
-            start_lib = chrom_start_libs[chrom]
-            stop_lib = chrom_stop_libs[chrom]
-            closest_results["upstream"] = bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib)
+    #Find the closest donor sam gtf
+    if jct.donor_sam.exists:
+        query = jct.donor_sam.donor()
+        chrom = jct.donor_sam.chromosome
+        if chrom in chrom_gtfs_don and chrom in chrom_don_libs:
+            gtfs_don = chrom_gtfs_don[chrom]
+            don_lib = chrom_don_libs[chrom]
+            closest_don_ind,its = bin_search_gtf(query,don_lib)
+            closest_results["donor"] = gtfs_don[closest_don_ind]
 
-    #Find the closest downstream sam gtf checking start and stop of the gtfs
-    if jct.downstream_sam.exists:
-        query = jct.downstream_sam.start
-        chrom = jct.downstream_sam.chromosome
-        if chrom in chrom_gtfs_start and chrom in chrom_gtfs_stop and chrom in chrom_start_libs and chrom in chrom_stop_libs:
-            gtfs_start = chrom_gtfs_start[chrom]
-            gtfs_stop = chrom_gtfs_stop[chrom]
-            start_lib = chrom_start_libs[chrom]
-            stop_lib = chrom_stop_libs[chrom]
-            closest_results["downstream"] = bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib)
+    #Find the closest acceptor sam gtf
+    if jct.acceptor_sam.exists:
+        query = jct.acceptor_sam.acceptor()
+        chrom = jct.acceptor_sam.chromosome
+        if chrom in chrom_gtfs_acc and chrom in chrom_acc_libs:
+            gtfs_acc = chrom_gtfs_acc[chrom]
+            acc_lib = chrom_acc_libs[chrom]
+            closest_acc_ind,its = bin_search_gtf(query,acc_lib)
+            closest_results["acceptor"] = gtfs_acc[closest_acc_ind]
 
     return closest_results
 
 #############################################
 #  Brute Force Search Closest GTF Helper    #
 #############################################
+#THINK I NO LONGER NEED THIS FUNCTION
 #Checks every gtf on the correct chromosome
 def brute_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
     """
@@ -549,6 +593,8 @@ def brute_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
 ########################################
 #  Binary Search Closest GTF Helper    #
 ########################################
+#THINK I NO LONGER NEED THIS FUNCTION
+#Checks every gtf on the correct chromosome
 #A wrapper function which calls the recursive gtf binary search function
 def bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib):
     """
@@ -609,6 +655,7 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
     else:
         mid_ind = (start_ind+end_ind)/2
         #Determine whether or not to print this line
+        #(almost never want to except when debugging)
         if disp:
             print str(its)+")",library[start_ind],"--",library[mid_ind],"--",library[end_ind]
             
@@ -619,63 +666,16 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
             return bin_search_gtf(query,library,mid_ind,end_ind,its+1,disp=disp) 
 
 
-########################
-#   Get JCT GTF info   #
-########################
-# Reads the entire gtf line by line and checks against every junction
-# Reading the genes in as all exons to try and get start and stop site
-def get_jct_gtf_info(junctions,gtfs,constants_dict):
-    """
-    Goal: for each junction find the closest gtf for upstream and downstream
-    Arguments:
-        junctions is a list[Junction]
-        gtfs is a list[GTF]
-
-    Returns:
-        nothing (just updates the junction objects as pass-by-reference)
-    """
-    # Separate the gtfs by chromosome into a dictionary
-    chrom_gtfs = {}
-    for gtf in gtfs:
-        if gtf.chromosome not in chrom_gtfs:
-            chrom_gtfs[gtf.chromosome] = [gtf]
-        else:
-            chrom_gtfs[gtf.chromosome].append(gtf)
-
-    # Pre sort the gtfs into a start and stop oriented list by chromosome
-    chrom_gtfs_start = {}
-    chrom_gtfs_stop = {}
-    chrom_start_libs = {}
-    chrom_stop_libs = {}
-    for chrom in chrom_gtfs:
-        chrom_gtfs_start[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.start)
-        chrom_gtfs_stop[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.stop)
-        chrom_start_libs[chrom] = [gtf.start for gtf in chrom_gtfs_start[chrom]]
-        chrom_stop_libs[chrom] = [gtf.stop for gtf in chrom_gtfs_stop[chrom]]
-
-    # Loop through the collapsed gtfs to see if the junction is in the range
-    for junction in junctions:
-        jct_ind = junctions.index(junction)
-        closest_results = find_closest_gtf(junction,chrom_gtfs_start,chrom_gtfs_stop,chrom_start_libs,chrom_stop_libs)
-        if closest_results["upstream"]:
-            gtf = closest_results["upstream"]
-            junction.upstream_sam.gtf = gtf
-            
-        if closest_results["downstream"]:
-            gtf = closest_results["downstream"]
-            junction.downstream_sam.gtf = gtf
-            
-
 #####################################
 #         Identify Fusions          #
 #####################################
 #Takes junctions that already have gtf info
 #If a junction has the following properties call it a 'fusion':
-#   If upstream and downstream sams are at_boundary:
-#       If upstream and downstream are on different chromosomes
+#   If donor and acceptor sams are at_boundary:
+#       If donor and acceptor are on different chromosomes
 #           [yes fusion]
-#       ELIF upstream and downstream are on different strands
-#       ELIF distance between upstream and downstream > threshold
+#       ELIF donor and acceptor are on different strands
+#       ELIF distance between donor and acceptor > threshold
 #           [yes fusion]
 #       ELSE
 #           [no fusion]
@@ -683,7 +683,7 @@ def get_jct_gtf_info(junctions,gtfs,constants_dict):
 #       [no fusion]
 #
 #Returns a list of junctions that are deemed 'fusions'
-def identify_fusions(junctions,span_cutoff=1e6):
+def identify_fusions(junctions,constants_dict):
     """
     Goal: take the junctions and find the ones that could be fusions
     Arguments:
@@ -693,12 +693,13 @@ def identify_fusions(junctions,span_cutoff=1e6):
     Returns:
         fusion_jcts as a list[Junction] with the junctions defined as fusions
     """
+    span_cutoff = constants_dict["span_cutoff"]
     fusion_jcts = []
     for jct in junctions:
-        if jct.at_boundary("upstream") and jct.at_boundary("downstream"):
-            if jct.upstream_sam.chromosome != jct.downstream_sam.chromosome:
+        if jct.at_boundary("donor") and jct.at_boundary("acceptor"):
+            if jct.donor_sam.chromosome != jct.acceptor_sam.chromosome:
                 fusion_jcts.append(jct)
-            elif jct.upstream_sam.strand != jct.downstream_sam.strand:
+            elif jct.donor_sam.strand != jct.acceptor_sam.strand:
                 fusion_jcts.append(jct)
             elif abs(jct.span()) > span_cutoff:
                 fusion_jcts.append(jct)
@@ -721,7 +722,7 @@ def identify_fusions(junctions,span_cutoff=1e6):
 # [5] None <-- kind of in the place of fusions for now
 def assign_class(sam_R1,sam_R2):
     """
-    Goal: take the upstream and downstream sam and categorize them
+    Goal: take the donor and acceptor sam and categorize them
     Arguments:
         sam_R1 is of type SAMEntry
         sam_R2 is of type SAMEntry
@@ -888,8 +889,8 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
     #it will be combinations, not permutations (chr1:chr2 == chr2:chr1)
     splices_by_chroms = {}
     for jct in jcts:
-        chrom_1 = str(jct.upstream_sam.chromosome)
-        chrom_2 = str(jct.downstream_sam.chromosome)
+        chrom_1 = str(jct.donor_sam.chromosome)
+        chrom_2 = str(jct.acceptor_sam.chromosome)
         if chrom_1+chrom_2 in splices_by_chroms:
             splices_by_chroms[chrom_1+chrom_2].append(jct)
         elif chrom_2+chrom_1 in splices_by_chroms:
@@ -901,8 +902,8 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
     for chroms in splices_by_chroms:
         groupings[chroms] = []
         for jct in splices_by_chroms[chroms]:
-            don = jct.upstream_sam.stop
-            acc = jct.downstream_sam.start
+            don = jct.donor_sam.stop
+            acc = jct.acceptor_sam.start
             found_prev_group = False
 
             #Only compare jct to other jcts if both
@@ -910,8 +911,8 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
             if don and acc:
                 for prev_group in groupings[chroms]:
                     for prev_jct in prev_group:
-                        prev_don = prev_jct.upstream_sam.stop
-                        prev_acc = prev_jct.downstream_sam.start
+                        prev_don = prev_jct.donor_sam.stop
+                        prev_acc = prev_jct.acceptor_sam.start
                         #If any one of the acceptor/donors are None
                         if not prev_don or not prev_acc:
                             continue
