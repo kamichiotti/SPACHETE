@@ -377,6 +377,25 @@ for file_name in file_names:
         denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
         write_time("-Time to find splice indices ",start_find_splice_inds,timer_file_path)
 
+        # Write out the denovo_junctions before collapsing for debugging
+        start_write_pre_collapsed = time.time()
+        machete_style_name = os.path.join(output_dir,"pre_collapse_novel_junctions_machete.fasta")
+        machete_style_file = open(machete_style_name, "w")
+        for denovo_junction in denovo_junctions:
+            jct_ind = denovo_junctions.index(denovo_junction)
+            machete_style_file.write(denovo_junction.fasta_MACHETE())
+        machete_style_file.close()
+        write_time("-Time to write pre-collapse junctions ",start_write_pre_collapsed,timer_file_path)
+ 
+        # Collapse the junctions that have the same splice site
+        start_collapse_junctions = time.time()
+        group_file_name = os.path.join(output_dir,"collapsing_group_log.txt")
+        singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict,group_file_name)
+        sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
+        denovo_junctions = singular_jcts+collapsed_jcts
+        write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
+
+
         # Get GTF information for the identified denovo_junctions
         # NOTE currently trying forward and rev-comp junction to see which one is closer to gtfs
         start_get_jct_gtf_info = time.time()
@@ -403,6 +422,7 @@ for file_name in file_names:
             forward_dist = forward_jct.boundary_dist("donor")+forward_jct.boundary_dist("acceptor")
             reverse_dist = reverse_jct.boundary_dist("donor")+reverse_jct.boundary_dist("acceptor")
             
+            #This if statement is just checking a known case where forward and reverse matter
             if (forward_jct.donor_sam.str_gene() == "NUP214" or 
                     forward_jct.acceptor_sam.str_gene() == "NUP214" or
                     reverse_jct.donor_sam.str_gene() == "NUP214" or
@@ -429,26 +449,6 @@ for file_name in file_names:
 
         write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
         sys.stdout.write(str(len(denovo_junctions))+"\n")
-
-        """
-        # Write out the denovo_junctions before collapsing for debugging
-        start_write_pre_collapsed = time.time()
-        machete_style_name = os.path.join(output_dir,"pre_collapse_novel_junctions_machete.fasta")
-        machete_style_file = open(machete_style_name, "w")
-        for denovo_junction in denovo_junctions:
-            jct_ind = denovo_junctions.index(denovo_junction)
-            machete_style_file.write(denovo_junction.fasta_MACHETE())
-        machete_style_file.close()
-        write_time("-Time to write pre-collapse junctions ",start_write_pre_collapsed,timer_file_path)
-        """
- 
-        # Collapse the junctions that have the same splice site
-        start_collapse_junctions = time.time()
-        group_file_name = os.path.join(output_dir,"collapsing_group_log.txt")
-        singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict,group_file_name)
-        sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
-        denovo_junctions = singular_jcts+collapsed_jcts
-        write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()

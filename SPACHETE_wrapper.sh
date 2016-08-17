@@ -35,7 +35,7 @@
 #############################
 KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
 OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test/"
-STEM_INCLUDE_ONLY_LIST=("SRR3192410")
+STEM_INCLUDE_ONLY_LIST=("SRR3192409")
 
 #############################
 #     CML test samples      #

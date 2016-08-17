@@ -206,7 +206,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
     """
     # Gather info from the constants dictionary
     splice_finder_temp_name = os.path.join(constants_dict["output_dir"],"splice_finder_temp_")
-    #thirds_len = constants_dict["thirds_len"]
+    thirds_len = constants_dict["thirds_len"]
     min_score = constants_dict["splice_finding_min_score"]
     max_mismatches = int(constants_dict["splice_finding_allowed_mismatches"])
     read_gap_score = constants_dict["read_gap_score"]
@@ -233,10 +233,10 @@ def find_splice_inds(denovo_junctions,constants_dict):
             sys.stdout.flush()
             junction = denovo_junctions[jct_ind]
             cons_len = len(junction.consensus)
-            splice_map_size = len(junction.consensus)/3
+            #splice_map_size = len(junction.consensus)/3
             #NOTE found that I was forcinng splice sites to be too central if I used the thirds len
             #NOTE and lost BCR-ABL this way, so instead I'll stick with using 1/3 of the consensus
-            #splice_map_size = thirds_len
+            splice_map_size = thirds_len
 
             five_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(0,cons_len-2*splice_map_size+1)]
             three_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(splice_map_size,cons_len-splice_map_size+1)]
@@ -554,72 +554,6 @@ def find_closest_gtf(jct,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_
 
     return closest_results
 
-#############################################
-#  Brute Force Search Closest GTF Helper    #
-#############################################
-#THINK I NO LONGER NEED THIS FUNCTION
-#Checks every gtf on the correct chromosome
-def brute_find_closest_gtf_helper(query,chrom,chrom_gtfs_start,chrom_gtfs_stop):
-    """
-    Goal: find the closest gtf to a given coordinate
-    Arguments:
-        query is an integer of the genomic coordinate
-        chrom is a string of the chromosome
-        takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by start
-        takes in chrom_gtfs_stop which is a dict["chrom":list[GTFEntry]] sorted by stop
-
-    Returns:
-        the single closest GTFEntry object
-    """
-    closest_start_gtf = None
-    closest_stop_gtf = None
-    closest_start_dist = -1
-    closest_stop_dist = -1
-    for gtf in chrom_gtfs_start[chrom]:
-        if abs(gtf.start-query) < closest_start_dist or not closest_start_gtf:
-            closest_start_dist = abs(gtf.start-query)
-            closest_start_gtf = gtf
-        if abs(gtf.stop-query) < closest_stop_dist or not closest_stop_gtf:
-            closest_stop_dist = abs(gtf.stop-query)
-            closest_stop_gtf = gtf
-
-    #Decide which one is closer to return
-    if closest_start_dist < closest_stop_dist:
-        return closest_start_gtf
-    else:
-        return closest_stop_gtf
-
-
-########################################
-#  Binary Search Closest GTF Helper    #
-########################################
-#THINK I NO LONGER NEED THIS FUNCTION
-#Checks every gtf on the correct chromosome
-#A wrapper function which calls the recursive gtf binary search function
-def bin_find_closest_gtf_helper(query,gtfs_start,gtfs_stop,start_lib,stop_lib):
-    """
-    Goal: prepare input and handle output from the recursive binary search function
-    Arguments:
-        query is an integer genomic location
-        chrom is a string chromosome selection
-        takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by start
-        takes in chrom_gtfs_start which is a dict["chrom":list[GTFEntry]] sorted by stop
-
-    Returns:
-        the single closest GTFEntry object
-    """
-    closest_start,its_start = bin_search_gtf(query,start_lib)
-    closest_stop,its_stop = bin_search_gtf(query,stop_lib)
-
-    start_gtf = gtfs_start[closest_start] 
-    stop_gtf = gtfs_stop[closest_stop]
-   
-    start_dist = abs(query-closest_start)
-    stop_dist = abs(query-closest_stop)
-
-    ret_val = start_gtf if start_dist < stop_dist else stop_gtf
-    return ret_val
-   
 
 #################################
 #    Binary Search Closest GTF  #
@@ -902,8 +836,8 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
     for chroms in splices_by_chroms:
         groupings[chroms] = []
         for jct in splices_by_chroms[chroms]:
-            don = jct.donor_sam.stop
-            acc = jct.acceptor_sam.start
+            don = jct.donor_sam.donor()
+            acc = jct.acceptor_sam.acceptor()
             found_prev_group = False
 
             #Only compare jct to other jcts if both
@@ -911,8 +845,8 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
             if don and acc:
                 for prev_group in groupings[chroms]:
                     for prev_jct in prev_group:
-                        prev_don = prev_jct.donor_sam.stop
-                        prev_acc = prev_jct.acceptor_sam.start
+                        prev_don = prev_jct.donor_sam.donor()
+                        prev_acc = prev_jct.acceptor_sam.acceptor()
                         #If any one of the acceptor/donors are None
                         if not prev_don or not prev_acc:
                             continue
