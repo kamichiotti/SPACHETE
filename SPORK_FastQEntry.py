@@ -33,7 +33,7 @@ class FastQEntry(object):
         """
         third_len = len(self.seq)/3
         if third_len < min_third:
-            sys.stderr.write("Skipping read too short to split in thirds: "+self.read_id+"\n")
+            #sys.stderr.write("Skipping read too short to split in thirds: "+self.read_id+"\n")
             return None,None
         five_prime_seq = self.seq[:third_len]
         three_prime_seq = self.seq[2*third_len:]
@@ -53,7 +53,7 @@ class FastQEntry(object):
         """
         #Check to make sure can at least get the first and last third in length
         if len(self.seq) <= third_len*2:
-            sys.stderr.write("Skipping read too short to split in thirds: "+self.read_id+" len = "+str(len(self.seq))+"\n")
+            #sys.stderr.write("Skipping read too short to split in thirds: "+self.read_id+" len = "+str(len(self.seq))+"\n")
             return None,None
         five_prime_seq = self.seq[:third_len]
         three_prime_seq = self.seq[-third_len:]

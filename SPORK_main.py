@@ -230,7 +230,7 @@ for file_name in file_names:
                     combined_out.write(R2_in_file.readline()) #Write out the + line
                     combined_out.write(R2_in_file.readline()) #Write out the quality line
                     header_line = R2_in_file.readline()
-
+    sys.stdout.write("SPORK: created combined fastq file\n")
 
     # Process the file to split each read into a 5' and 3' fastq file
     write_time("Starting main portion",time.time(),timer_file_path)
@@ -258,6 +258,7 @@ for file_name in file_names:
                             three_prime_file.write(str(fragment_3))
                         read_id = f_in.readline()
         write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
+    sys.stdout.write("SPORK: made split unaligned read files\n")
 
     # Map the 5' and 3' split files to the reference to generate the sam files
     # NOTE this can take a very long time for large R1 files
@@ -281,6 +282,7 @@ for file_name in file_names:
         write_time("Time to map split unaligned reads 3'"+R_file_name,start_split_mapping,timer_file_path)
         five_prime_mapped.close()
         three_prime_mapped.close()
+    sys.stdout.write("SPORK: mapped 5' and 3' pieces\n")
 
     ##########################
     # Build Denovo Jct Fasta #
@@ -352,12 +354,14 @@ for file_name in file_names:
         start_build_group_ranges = time.time()
         bin_pair_group_ranges = find_bin_pair_group_ranges(bin_pairs,constants_dict)
         write_time("-Time to build group ranges",start_build_group_ranges,timer_file_path)
+        sys.stdout.write("SPORK: built bin pair group ranges\n")
 
         # Build the junctions from bin pairs and their ends
         denovo_junctions = []
         start_build_junctions = time.time()
         denovo_junctions = build_junction_sequences(bin_pairs,bin_pair_group_ranges,R_file_path,constants_dict)
         write_time("-Time to build junctions ",start_build_junctions,timer_file_path)
+        sys.stdout.write("SPORK: built junctions\n")
         bin_pairs = [] #clearing the bin pairs to free up space
 
         # Write out the ids of the reads used to build junctions
@@ -376,6 +380,7 @@ for file_name in file_names:
         start_find_splice_inds = time.time()
         denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
         write_time("-Time to find splice indices ",start_find_splice_inds,timer_file_path)
+        sys.stdout.write("SPORK: found splice indices\n")
 
 
         # Write out the denovo_junctions before collapsing for debugging
@@ -395,6 +400,7 @@ for file_name in file_names:
         sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
         denovo_junctions = singular_jcts+collapsed_jcts
         write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
+        sys.stdout.write("SPORK: collapsed junctions\n")
 
 
         # Get GTF information for the identified denovo_junctions
@@ -422,13 +428,14 @@ for file_name in file_names:
                 gtf_denovo_junctions.append(reverse_jct)
 
         write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
+        sys.stdout.write("SPORK: got gtf info for junctions\n")
         sys.stdout.write(str(len(denovo_junctions))+"\n")
 
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()
         fusion_junctions = identify_fusions(denovo_junctions,constants_dict)
-        sys.stderr.write("Len fusion jcts = "+str(len(fusion_junctions))+"\n")
+        sys.stderr.write("Number of fusion jcts found = "+str(len(fusion_junctions))+"\n")
         write_time("Time to identify fusions "+R_file_name,start_identify_fusions,timer_file_path)
 
         #########################################################
@@ -461,10 +468,13 @@ for file_name in file_names:
         jct_style_file.close()
         fusions_file.close()
         write_time("Time to save denovo junctions "+R_file_name,start_save_denovo_junctions,timer_file_path)
+        sys.stdout.write("SPORK: saved all output\n")
         denovo_junctions = [] #NOTE clearing the denovo junctions to free up space
         
            
 write_time("Entire time",start_entire_time,timer_file_path)
+sys.stdout.write("SPORK: completed\n")
+
 
 
 

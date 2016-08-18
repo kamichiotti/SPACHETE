@@ -263,7 +263,7 @@ for index in range(1,NUM_FILES + 1):
     stdout = open(os.path.join(LOG_DIR,str(index) + "_out_5FJIndexing.txt"),"w")
     stderr = open(os.path.join(LOG_DIR,str(index) + "_err_5FJIndexing.txt"),"w")
     #print(cmd)
-    cmd = "{MACHETE}/linkfastafiles_SPORK.sh {OUTPUT_DIR} {index} {SPORK_FASTA}".format(MACHETE=MACHETE,OUTPUT_DIR=OUTPUT_DIR,index=index,SPORK_FASTA=SPORK_FASTA)
+    cmd = "{MACHETE}/linkfastafiles_SPORK.sh {OUTPUT_DIR} {index} {SPORK_FASTA} {INSTALLDIR}".format(MACHETE=MACHETE,OUTPUT_DIR=OUTPUT_DIR,index=index,SPORK_FASTA=SPORK_FASTA,INSTALLDIR=MACHETE)
     popen = subprocess.Popen(cmd,stdout=stdout,stderr=stderr,shell=True)
     processes[popen] = {"stdout":stdout,"stderr":stderr,"cmd":cmd}
 checkProcesses(processes)

@@ -895,7 +895,6 @@ def collapse_junctions(jcts,full_path_name,constants_dict,group_out_file_name=No
                 counts = [len(member.bin_pair_group) for member in group]
                 max_ind = counts.index(max(counts))
                 repr_jct = group[max_ind]
-                sys.stdout.write(repr_jct.verbose_fasta_string()+"\n")
                 groups.append(repr_jct)
 
     if group_out_file_name:

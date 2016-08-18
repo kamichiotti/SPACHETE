@@ -35,7 +35,7 @@
 #############################
 KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
 OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test/"
-STEM_INCLUDE_ONLY_LIST=("SRR3192411")
+STEM_INCLUDE_ONLY_LIST=("SRR3192413")
 
 #############################
 #     CML test samples      #
@@ -47,7 +47,7 @@ STEM_INCLUDE_ONLY_LIST=("SRR3192411")
 #    Normal breast samples      #
 #################################
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_8_15"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_8_17"
 
 ######################################
 #    Simulated engstrom samples      #
@@ -59,7 +59,7 @@ STEM_INCLUDE_ONLY_LIST=("SRR3192411")
 #    Normal fetal samples      #
 ################################
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_15"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_17"
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"
 #                        "Fetal_Adrenal_403b_GTCCGC_L008"
 #                        "Fetal_Adrenal_408_CGATGT_L008"

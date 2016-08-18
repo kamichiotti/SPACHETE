@@ -15,6 +15,7 @@ FJDir=${1} #MACHETE output directory
 STEMFILE=${1}/StemList.txt
 TASK_ID=${2}
 SPORK_fasta=${3}
+INSTALLDIR=${4}
 
 STEM=`awk 'FNR == '${TASK_ID}' {print $1}' ${STEMFILE}`
 
@@ -30,6 +31,7 @@ cp ${BigFastaFile} ${CopyFastaName}
 bowtie2-build ${CopyFastaName} ${BowtieIndex}
 
 #Making individual chromosome fastas just to follow gillian's methods
-python split_large_fasta.py ${CopyFastaName}
+echo "python ${INSTALLDIR}/split_large_fasta.py ${CopyFastaName}"
+python ${INSTALLDIR}/split_large_fasta.py ${CopyFastaName}
 
 echo "linkfastafiles and Bowtie Index built for Far Junctions for sample ${STEM}" >> ${1}/MasterError.txt
