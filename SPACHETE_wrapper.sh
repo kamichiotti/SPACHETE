@@ -33,9 +33,9 @@
 #############################
 #    CML UConn samples      #
 #############################
-KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test/"
-STEM_INCLUDE_ONLY_LIST=("SRR3192413")
+#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test/"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192415")
 
 #############################
 #     CML test samples      #
@@ -46,8 +46,9 @@ STEM_INCLUDE_ONLY_LIST=("SRR3192413")
 #################################
 #    Normal breast samples      #
 #################################
-#KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_8_17"
+KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_8_18"
+STEM_INCLUDE_ONLY_LIST=("SRR1027188")
 
 ######################################
 #    Simulated engstrom samples      #

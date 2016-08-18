@@ -26,7 +26,7 @@ mkdir -p ${AlignedIndels}
 
 #RB changing this to be preceded by toy (better fix would be to search through
 #directory, but this is ok
-IndelIndex="${5}/toy_hg19_junctions_reg_indels_${2}"
+IndelIndex="${5}/hg19_junctions_reg_indels_${2}"
 
 #if [ "$(ls -A ${AlignedIndels}unaligned_${STEM}_*_indel${2}.sam)" ]
 samFiles=$(find ${AlignedIndels} -name unaligned_${STEM}_*_indel${2}.sam -print)

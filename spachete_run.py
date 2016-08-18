@@ -763,7 +763,12 @@ AlignedIndels = os.path.join(CIRCPIPE_DIR,"orig/RegIndelAlignments")
 if not os.path.exists(AlignedIndels):
     os.makedirs(AlignedIndels)
 
-#  To train the GLM, indel alignments are also created for the linear junctions.  The reference index of indels to the linear junctions is static and has already been created and is referenced above as "REG_INDEL_INDICES" on line 44.  The script AlignRegIndels calls bowtie to align reads that were unaligned the the KNIFE indices (in KNIFEdir/orig/unaligned/*.fq) to the REG_INDEL_INDICES, with the parameters of 1) approx 4 mismatches / 100 bases, maximum number N's = readlength, and no gapped alignments or read gaps.
+#  To train the GLM, indel alignments are also created for the linear junctions.
+#The reference index of indels to the linear junctions is static and has already been created
+#It is referenced above as "REG_INDEL_INDICES" on line 44.
+#The script AlignRegIndels calls bowtie to align reads that were unaligned the the KNIFE indices (in KNIFEdir/orig/unaligned/*.fq)
+#to the REG_INDEL_INDICES, with the parameters of 1) approx 4 mismatches / 100 bases, maximum number N's = readlength,
+#and no gapped alignments or read gaps.
 #j16_id
 print("STATUS:Aligning unaligned files to linear junc indels")
 BOWTIEPARAMETERS = "--no-sq --no-unal --score-min L,0,-0.24 --rdg 50,50 --rfg 50,50"
