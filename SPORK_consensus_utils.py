@@ -9,14 +9,21 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
     #Add padding to the left sides of the reads based on where they fell in the bin pair
     #Note that for the plus strand, more padding should be added the larger ther pos%bin_size value
     #while this should have less padding on a minus strand read. This is implemented w/ the ternary expression
+    read_num_to_read_id = constants_dict["read_num_to_read_id"]
     padded_seqs = []
     left_padded_seqs = []
     for mapped_read in mapped_reads:
         id_key = mapped_read.read_id
         id_key = id_key.replace("/5_prime","")
         id_key = id_key.replace("/3_prime","")
-        id_key = id_key.replace("_"," ")
-        full_seq = id_to_seq["@"+id_key]
+        id_key = read_num_to_read_id[id_key]
+        #id_key = id_key.replace("_"," ")
+        if id_key in id_to_seq:
+            full_seq = id_to_seq[id_key]
+            sys.stderr.write("Found "+id_key+" in consensus building\n")
+        else:
+            sys.stderr.write("ERROR: Couldn't find sequence "+id_key+" in consensus building\n")
+            sys.exit(1)
         mapped_read.read_id = id_key
         left_padding = int(mapped_read.start%bin_size) if strand == "+" else int(bin_size-mapped_read.start%bin_size)
         left_padded_seq = " "*left_padding+full_seq

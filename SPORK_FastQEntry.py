@@ -72,7 +72,8 @@ class FastQEntry(object):
         Returns:
             nothing
         """
-        self.read_id = self.read_id.replace(" ","_").replace("\t","_").replace("\n","")
+        #self.read_id = self.read_id.replace(" ","_").replace("\t","_").replace("\n","")
+        self.read_id = self.read_id.replace("\n","")
         self.seq = self.seq.replace("U","T").replace("\n","")
         self.plus_line = self.plus_line.replace(" ","_").replace("\n","")
         self.quality = self.quality.replace("\n","")

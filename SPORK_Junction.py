@@ -234,8 +234,11 @@ class Junction(object):
         rev_self.donor_sam.seq,rev_self.acceptor_sam.seq = rev_self.acceptor_sam.seq,rev_self.donor_sam.seq
         
         #Flip the strands of both SAMs
-        rev_self.donor_sam.strand = "-" if rev_self.donor_sam.strand == "+" else "+"
-        rev_self.acceptor_sam.strand = "-" if rev_self.acceptor_sam.strand == "+" else "+"
+        #NOTE only switch the strands if both are + or -, don't do it otherwise
+        #Interesting that it works this way, but I drew it out and I'm confident
+        if rev_self.donor_sam.strand == rev_self.acceptor_sam.strand:
+            rev_self.donor_sam.strand = "-" if rev_self.donor_sam.strand == "+" else "+"
+            rev_self.acceptor_sam.strand = "-" if rev_self.acceptor_sam.strand == "+" else "+"
 
         #Trade starts and stops of donor and acceptor and chromosome
         rev_self.donor_sam.start,rev_self.acceptor_sam.start = rev_self.acceptor_sam.start,rev_self.donor_sam.start

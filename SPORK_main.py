@@ -206,6 +206,7 @@ for file_name in file_names:
 
     #Combine the R1 and R2 fastqs adding R1 and R1 to the headers
     #to disambiguate in case of identical matching
+    num_total_reads = 0
     if stem_name:
         combined_out_name = os.path.join(output_dir,stem_name+"_combined_reads.fq")
     else:
@@ -220,6 +221,7 @@ for file_name in file_names:
                     combined_out.write(R1_in_file.readline()) #Write out the + line
                     combined_out.write(R1_in_file.readline()) #Write out the quality line
                     header_line = R1_in_file.readline()
+                    num_total_reads += 1
 
         if len(full_paths_in) >= 2:
             with open(full_paths_in[1],"r") as R2_in_file:
@@ -230,6 +232,7 @@ for file_name in file_names:
                     combined_out.write(R2_in_file.readline()) #Write out the + line
                     combined_out.write(R2_in_file.readline()) #Write out the quality line
                     header_line = R2_in_file.readline()
+                    num_total_reads += 1
     sys.stdout.write("SPORK: created combined fastq file\n")
 
     # Process the file to split each read into a 5' and 3' fastq file
@@ -239,6 +242,7 @@ for file_name in file_names:
     R_file_name = stem_name if stem_name else "combined"
     five_prime_fq_name = os.path.join(output_dir,"5prime_"+R_file_name.split(".")[0]+".fq")
     three_prime_fq_name = os.path.join(output_dir,"3prime_"+R_file_name.split(".")[0]+".fq")
+    read_num_to_read_id = {} #<-- I will assign my own read numbers to each read ID
     if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name):
         write_time("Using previous split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
     else:
@@ -246,19 +250,26 @@ for file_name in file_names:
             with open(three_prime_fq_name, "w") as three_prime_file:
                 with open(R_file_path, "r") as f_in:
                     read_id = f_in.readline()
+                    read_num_format = "0"+str(len(str(num_total_reads)))+"d"
+                    read_num = 0
                     while read_id:
                         seq = f_in.readline()
                         plus_line = f_in.readline()
                         quality = f_in.readline()
                         fastq_read = FastQEntry(read_id, seq, plus_line, quality)
+                        formatted_read_id = format(read_num,read_num_format)
+                        fastq_read.read_id = "@"+formatted_read_id
                         fragment_5, fragment_3 = fastq_read.get_first_last_n(thirds_len)
                         #Check that both fragments are defined before writing them out
                         if fragment_5 and fragment_3:
                             five_prime_file.write(str(fragment_5))
                             three_prime_file.write(str(fragment_3))
+                        read_num_to_read_id[formatted_read_id] = read_id.strip()
                         read_id = f_in.readline()
+                        read_num += 1
         write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
     sys.stdout.write("SPORK: made split unaligned read files\n")
+    constants_dict["read_num_to_read_id"] = read_num_to_read_id
 
     # Map the 5' and 3' split files to the reference to generate the sam files
     # NOTE this can take a very long time for large R1 files
@@ -316,7 +327,7 @@ for file_name in file_names:
                     sys.stderr.write("ERROR: Found duplicate base_read_id in 5_prime mappings\n")
                     sys.stderr.write(base_read_id+"\n")
                     sys.exit(1)
-                # Filter out the strange chromosomes: (e.g. chrUn_gl000220)
+                # Filter out some of the strange chromosomes: (e.g. chrUn_gl000220)
                 if "_" not in sam_entry.chromosome:
                     id_to_sam_dict[base_read_id] = sam_entry
                 sam_line = five_prime_mapped.readline()
@@ -331,11 +342,11 @@ for file_name in file_names:
             while sam_line:
                 three_prime_sam = SAMEntry(sam_line)
                 base_read_id = three_prime_sam.read_id.replace("/3_prime","")
-                # Filter out the strange chromosomes: (e.g. chrUn_gl000220)
+                # Filter out some of the strange chromosomes: (e.g. chrUn_gl000220)
                 if "_" not in three_prime_sam.chromosome and base_read_id in id_to_sam_dict:
                     five_prime_sam = id_to_sam_dict[base_read_id]
-                    five_prime_bin = five_prime_sam.start/bin_size
-                    three_prime_bin = three_prime_sam.start/bin_size
+                    five_prime_bin = int(five_prime_sam.start/bin_size)
+                    three_prime_bin = int(three_prime_sam.start/bin_size)
                     bin_pair = BinPair(five_prime_sam,three_prime_sam,five_prime_bin,three_prime_bin)
                     bin_pairs.append(bin_pair)
                 sam_line = three_prime_mapped.readline()
@@ -360,7 +371,7 @@ for file_name in file_names:
         denovo_junctions = []
         start_build_junctions = time.time()
         denovo_junctions = build_junction_sequences(bin_pairs,bin_pair_group_ranges,R_file_path,constants_dict)
-        write_time("-Time to build junctions ",start_build_junctions,timer_file_path)
+        write_time("-Time to build "+str(len(denovo_junctions))+" junctions ",start_build_junctions,timer_file_path)
         sys.stdout.write("SPORK: built junctions\n")
         bin_pairs = [] #clearing the bin pairs to free up space
 
@@ -369,17 +380,15 @@ for file_name in file_names:
         with open(used_read_ids_name,"w") as used_read_ids:
             for jct in denovo_junctions:
                 for bin_pair in jct.bin_pair_group:
-                    used_read_id = bin_pair.five_prime_SAM.read_id
-                    if " R1" in used_read_id:
-                        trimmed_read_id = used_read_id.replace(" R1","")
-                    if " R2" in used_read_id:
-                        trimmed_read_id = used_read_id.replace(" R2","")                   
+                    used_read_num = bin_pair.five_prime_SAM.read_id
+                    used_read_id = read_num_to_read_id[used_read_num]
+                    trimmed_read_id = used_read_id[-3] #To get rid of the " R1" or " R2"
                     used_read_ids.write("@"+trimmed_read_id+"\n")
 
         # Find the splice indicies of the junctions
         start_find_splice_inds = time.time()
         denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
-        write_time("-Time to find splice indices ",start_find_splice_inds,timer_file_path)
+        write_time("-Found splice indices of "+str(len(denovo_junctions))+" junctions",start_find_splice_inds,timer_file_path)
         sys.stdout.write("SPORK: found splice indices\n")
 
 
@@ -404,9 +413,14 @@ for file_name in file_names:
 
 
         # Get GTF information for the identified denovo_junctions
-        # NOTE currently trying forward and rev-comp junction to see which one is closer to gtfs
+        # Trying forward and rev-comp junction to see which one is closer to gtfs
         start_get_jct_gtf_info = time.time()
-        forward_jcts,reverse_jcts = zip(*[jct.yield_forward_and_reverse() for jct in denovo_junctions])
+        forward_jcts = []
+        reverse_jcts = []
+        for jct in denovo_junctions:
+            forward_jct,reverse_jct = jct.yield_forward_and_reverse()
+            forward_jcts.append(forward_jct)
+            reverse_jcts.append(reverse_jct)
         
         start_time = time.time()
         get_jct_gtf_info(forward_jcts,gtfs,constants_dict)

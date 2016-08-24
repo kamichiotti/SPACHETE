@@ -134,9 +134,13 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
 
     # Build the dictionary of read_id to the full read
     for ind in range(0,len(unaligned_reads),2):
-        key = unaligned_reads[ind].replace("\n","")
-        value = unaligned_reads[ind+1].replace("\n","")
+        key = unaligned_reads[ind].strip()
+        value = unaligned_reads[ind+1].strip()
         id_to_seq[key] = value
+
+    for k in id_to_seq:
+        id_message = "   "+k+"->"+id_to_seq[k][:10]+"\n"
+        write_time(id_message,time.time(),constants_dict["timer_file_path"])
 
     # walk through each bin_pair_group
     write_time("Working on the jcts :"+str(len(bin_pair_group_ranges)),time.time(),constants_dict["timer_file_path"])
@@ -179,10 +183,9 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
             bin_consensus = reverse_compliment(bin_consensus)
             took_reverse_compliment = True
 
-        # If the bin score is high enough then add it
         """
+        # If the bin score is high enough then add it
         if bin_score < consensus_score_cutoff:
-            #__init__(consensus,score,bin_pair_group,took_reverse_compliment,constants_dict):
             denovo_junction = Junction(bin_consensus,bin_score,group_members,took_reverse_compliment,constants_dict)
             denovo_junctions.append(denovo_junction)
 
@@ -217,6 +220,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
     num_threads = constants_dict["num_threads"]
     reference = constants_dict["reference"]
     use_prior = constants_dict["use_prior"]
+    timer_file_path = constants_dict["timer_file_path"]
 
     # Handle temporary files
     five_prime_mapped_name = splice_finder_temp_name+"5_prime.sam"
@@ -365,7 +369,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
             down_remaining = jct.consensus[acceptor_ind+2*acceptor_len:]
             if acceptor_sam.strand == "+":
                 acceptor_sam.seq = acceptor_sam.seq+down_remaining
-                acceptor_sam.stop += len(down_remaining)
+                acceptor_sam.stop += len(down_remaining)-1
             elif acceptor_sam.strand == "-":
                 acceptor_sam.seq = reverse_compliment(acceptor_sam.seq)+down_remaining
                 acceptor_sam.start -= len(down_remaining)
@@ -378,17 +382,21 @@ def find_splice_inds(denovo_junctions,constants_dict):
         else:
             jcts_without_splice.append(jct)
 
-    #Convert all the jcts to have a plus-strand (+) donor for sake of collapsing
-    plus_jcts_with_splice = []
+    #Choose either the forward or reverse form of the junction that yields
+    #the smaller donor site since this will help collapsing in the next step
+    #(could have chosen larger donor etc, just to flip them all same way)
+    
+    write_time("# Jcts w/ splice = "+str(len(jcts_with_splice)),time.time(),timer_file_path)
+    small_don_jcts_with_splice = []
     for jct_with_splice in jcts_with_splice:
         for_jct,rev_jct = jct_with_splice.yield_forward_and_reverse()
-        if for_jct.donor_sam.strand == "+":
-            plus_jcts_with_splice.append(for_jct)
-        elif rev_jct.donor_sam.strand == "+":
-            plus_jcts_with_splice.append(rev_jct)
+        if for_jct.donor_sam.donor() < rev_jct.donor_sam.donor():
+            small_don_jcts_with_splice.append(for_jct)
+        else:
+            small_don_jcts_with_splice.append(rev_jct)
 
     #Return the jcts w/ and w/out splice separately
-    return plus_jcts_with_splice,jcts_without_splice
+    return small_don_jcts_with_splice,jcts_without_splice
 
 #######################
 #   Get Best Splice   #
