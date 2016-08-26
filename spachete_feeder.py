@@ -53,10 +53,11 @@ FullStemFile = os.path.join(OUTPUT_DIR,"StemList.txt")
 #####################
 if os.path.isfile(FullStemFile):
 ## This python script detects all the unique names for all pairs of files within a directory, eg. SRR12345, SRR123456, etc into a file called ${StemFile}
-    print("STATUS:using existing FullStemList.txt")
+    print("STATUS: using existing FullStemList.txt")
 else:
-    print("STATUS:generating FullStemList.txt from KNIFE output directory filenames")
+    print("STATUS: generating FullStemList.txt from KNIFE output directory filenames")
     subprocess.check_call("python {MACHETE}/writeStemIDFiles.py -o {ORIG_DIR} -f {OUTPUT_DIR}".format(MACHETE=MACHETE,ORIG_DIR=ORIG_DIR,OUTPUT_DIR=OUTPUT_DIR),shell=True)
+    print("STATUS: finished generating the FullStemList.txt")
 
 
 
@@ -64,7 +65,6 @@ else:
 #  Specify stems to run  #
 ##########################
 include_stems = args.STEM_INCLUDE_LIST
-
 if include_stems:
     include_stems = include_stems.split(",")
 
@@ -157,6 +157,7 @@ with open(FullStemFile,"r") as stem_file:
         out_files.append(machete_out)
         err_files.append(machete_err)
 
+        """
         #Sending jobs to the SLURM scheduler (comment out if not on SLURM)
         job_name = stem[-5:] #annoying that the full job name doesn't show
         slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
@@ -167,7 +168,7 @@ with open(FullStemFile,"r") as stem_file:
             sub_SLURM.write("#!/bin/bash\n")
             sub_SLURM.write("python "+os.path.join(MACHETE,"spachete_run.py")+OPTIONS+"\n")
 
-        subprocess.call(["sbatch","-p","horence","--mem=25000","--time=12:00:00",
+        subprocess.call(["sbatch","-p","horence","--mem=25000","--time=4:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
         """
@@ -180,7 +181,6 @@ with open(FullStemFile,"r") as stem_file:
                                            "--reg-indel-indices",REG_INDEL_INDICES,
                                            "--circref-dir",CIRCREF],
                                            stdout=machete_out,stderr=machete_err))
-        """
 
 
 #Force all the jobs to complete before exiting

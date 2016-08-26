@@ -220,7 +220,7 @@ class Junction(object):
             a tuple of Junction where the first entry is self and the
             second is a reverse compliment of self
         """
-        rev_self = copy.deepcopy(self)
+        rev_self = Junction(self.consensus,self.score,self.bin_pair_group,self.took_reverse_compliment,self.constants_dict)
         rev_self.took_reverse_compliment = not rev_self.took_reverse_compliment
 
         comp = {"A":"T","a":"t","T":"A","t":"a",
@@ -246,6 +246,44 @@ class Junction(object):
         rev_self.donor_sam.chromosome,rev_self.acceptor_sam.chromosome = rev_self.acceptor_sam.chromosome,rev_self.donor_sam.chromosome
 
         return self,rev_self
+
+    #Returns this junction and a reverse compliment of this junction
+    #to facilitate finding the gtf's of each and seeing which form is better
+    def yield_reverse(self):
+        """
+        Goal: return a reversed self
+        Arguments:
+            none
+
+        Returns:
+            a Junction which is the reverse of self (note does change original)
+        """
+        self.took_reverse_compliment = not self.took_reverse_compliment
+
+        comp = {"A":"T","a":"t","T":"A","t":"a",
+                "G":"C","g":"c","C":"G","c":"g",
+                "N":"N","n":"n"}
+
+        #Take the reverse compliments of the seqs and switch them between donor and acceptor
+        self.consensus = "".join([comp[base] for base in self.consensus])[::-1]
+        self.donor_sam.seq = "".join([comp[base] for base in self.donor_sam.seq])[::-1]
+        self.acceptor_sam.seq = "".join([comp[base] for base in self.acceptor_sam.seq])[::-1]
+        self.donor_sam.seq,self.acceptor_sam.seq = self.acceptor_sam.seq,self.donor_sam.seq
+        
+        #Flip the strands of both SAMs
+        #NOTE only switch the strands if both are + or -, don't do it otherwise
+        #Interesting that it works this way, but I drew it out and I'm confident
+        if self.donor_sam.strand == self.acceptor_sam.strand:
+            self.donor_sam.strand = "-" if self.donor_sam.strand == "+" else "+"
+            self.acceptor_sam.strand = "-" if self.acceptor_sam.strand == "+" else "+"
+
+        #Trade starts and stops of donor and acceptor and chromosome
+        self.donor_sam.start,self.acceptor_sam.start = self.acceptor_sam.start,self.donor_sam.start
+        self.donor_sam.stop,self.acceptor_sam.stop = self.acceptor_sam.stop,self.donor_sam.stop
+        self.donor_sam.chromosome,self.acceptor_sam.chromosome = self.acceptor_sam.chromosome,self.donor_sam.chromosome
+
+        return self
+
 
     #Format the junction for MACHETE in fasta form
     #NOTE only call this function on 'fusion' identified junctions

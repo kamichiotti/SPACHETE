@@ -16,6 +16,7 @@
 ###################
 import subprocess
 import argparse
+import pickle
 import time
 import sys
 import os
@@ -194,7 +195,7 @@ for file_name in file_names:
     else:
         sys.stdout.write("Found R2 file :"+R2_file+"\n")
         full_paths_in.append(R2_file)
-    write_time("Time to find R2 "+R2_file.split("/")[-1],start_find_R2,timer_file_path,False) #false overwrites the timer file
+    write_time("Time to find R2 "+str(R2_file).split("/")[-1],start_find_R2,timer_file_path,False) #false overwrites the timer file
 
     # Create file locations for fq files w/out spaces in headers
     R1_file_name = file_name
@@ -242,9 +243,11 @@ for file_name in file_names:
     R_file_name = stem_name if stem_name else "combined"
     five_prime_fq_name = os.path.join(output_dir,"5prime_"+R_file_name.split(".")[0]+".fq")
     three_prime_fq_name = os.path.join(output_dir,"3prime_"+R_file_name.split(".")[0]+".fq")
+    read_num_to_id_name = os.path.join(output_dir,"read_num_to_read_id.pickle")
     read_num_to_read_id = {} #<-- I will assign my own read numbers to each read ID
-    if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name):
+    if use_prior and os.path.isfile(five_prime_fq_name) and os.path.isfile(three_prime_fq_name) and os.path.isfile(read_num_to_id_name):
         write_time("Using previous split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
+        read_num_to_read_id = pickle.load(open(read_num_to_id_name,"rb"))
     else:
         with open(five_prime_fq_name, "w") as five_prime_file:
             with open(three_prime_fq_name, "w") as three_prime_file:
@@ -267,6 +270,7 @@ for file_name in file_names:
                         read_num_to_read_id[formatted_read_id] = read_id.strip()
                         read_id = f_in.readline()
                         read_num += 1
+        pickle.dump(read_num_to_read_id,open(read_num_to_id_name,"wb"))
         write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
     sys.stdout.write("SPORK: made split unaligned read files\n")
     constants_dict["read_num_to_read_id"] = read_num_to_read_id
@@ -380,10 +384,9 @@ for file_name in file_names:
         with open(used_read_ids_name,"w") as used_read_ids:
             for jct in denovo_junctions:
                 for bin_pair in jct.bin_pair_group:
-                    used_read_num = bin_pair.five_prime_SAM.read_id
-                    used_read_id = read_num_to_read_id[used_read_num]
-                    trimmed_read_id = used_read_id[-3] #To get rid of the " R1" or " R2"
-                    used_read_ids.write("@"+trimmed_read_id+"\n")
+                    used_read_id = bin_pair.five_prime_SAM.read_id
+                    used_read_id = used_read_id[:-3] #To get rid of the " R1" or " R2" added previously
+                    used_read_ids.write(used_read_id+"\n")
 
         # Find the splice indicies of the junctions
         start_find_splice_inds = time.time()
@@ -407,8 +410,9 @@ for file_name in file_names:
         group_file_name = os.path.join(output_dir,"collapsing_group_log.txt")
         singular_jcts,collapsed_jcts = collapse_junctions(denovo_junctions,R_file_path,constants_dict,group_file_name)
         sys.stdout.write("Num singular: ["+str(len(singular_jcts))+"], num collapsed: ["+str(len(collapsed_jcts))+"]\n")
+        collapse_message = "-Time to collapse junctions from "+str(len(denovo_junctions))+" to "+str(len(singular_jcts)+len(collapsed_jcts))
+        write_time(collapse_message,start_collapse_junctions,timer_file_path)
         denovo_junctions = singular_jcts+collapsed_jcts
-        write_time("-Time to collapse junctions ",start_collapse_junctions,timer_file_path)
         sys.stdout.write("SPORK: collapsed junctions\n")
 
 
@@ -417,12 +421,16 @@ for file_name in file_names:
         start_get_jct_gtf_info = time.time()
         forward_jcts = []
         reverse_jcts = []
+        
         for jct in denovo_junctions:
+            #jct.bin_pair_group = []
+            #write_time("Got here ",time.time(),timer_file_path)
             forward_jct,reverse_jct = jct.yield_forward_and_reverse()
             forward_jcts.append(forward_jct)
             reverse_jcts.append(reverse_jct)
         
         start_time = time.time()
+        write_time("About to call forward ",time.time(),timer_file_path)
         get_jct_gtf_info(forward_jcts,gtfs,constants_dict)
         write_time("Time to get jct gtf info forwards "+R_file_name,start_time,timer_file_path)
         start_time = time.time()

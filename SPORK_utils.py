@@ -138,12 +138,8 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
         value = unaligned_reads[ind+1].strip()
         id_to_seq[key] = value
 
-    for k in id_to_seq:
-        id_message = "   "+k+"->"+id_to_seq[k][:10]+"\n"
-        write_time(id_message,time.time(),constants_dict["timer_file_path"])
-
     # walk through each bin_pair_group
-    write_time("Working on the jcts :"+str(len(bin_pair_group_ranges)),time.time(),constants_dict["timer_file_path"])
+    write_time("Working on the bin-pairs :"+str(len(bin_pair_group_ranges)),time.time(),constants_dict["timer_file_path"])
     for bin_pair_group_range in bin_pair_group_ranges:
         #junction_num = "("+str(bin_pair_group_ranges.index(bin_pair_group_range)+1)+"/"+str(len(bin_pair_group_ranges))+")"
         #print junction_num
@@ -387,13 +383,16 @@ def find_splice_inds(denovo_junctions,constants_dict):
     #(could have chosen larger donor etc, just to flip them all same way)
     
     write_time("# Jcts w/ splice = "+str(len(jcts_with_splice)),time.time(),timer_file_path)
+    write_time("# Jcts w/out splice = "+str(len(jcts_without_splice)),time.time(),timer_file_path)
+
+    #This takes a long time to run which I guess makes sense since its doing a deep copy which
+    #is not really necessary. I could improve this
     small_don_jcts_with_splice = []
-    for jct_with_splice in jcts_with_splice:
-        for_jct,rev_jct = jct_with_splice.yield_forward_and_reverse()
-        if for_jct.donor_sam.donor() < rev_jct.donor_sam.donor():
-            small_don_jcts_with_splice.append(for_jct)
+    for jct in jcts_with_splice:
+        if jct.donor_sam.donor() < jct.acceptor_sam.acceptor():
+            small_don_jcts_with_splice.append(jct)
         else:
-            small_don_jcts_with_splice.append(rev_jct)
+            small_don_jcts_with_splice.append(jct.yield_reverse())
 
     #Return the jcts w/ and w/out splice separately
     return small_don_jcts_with_splice,jcts_without_splice
@@ -523,6 +522,8 @@ def get_jct_gtf_info(junctions,gtfs,constants_dict):
     # Find the closest gtfs to donor and acceptor
     for junction in junctions:
         jct_ind = junctions.index(junction)
+        message = "Finding gtf info ("+str(jct_ind)+"/"+str(len(junctions))+")"
+        write_time(message,time.time(),constants_dict["timer_file_path"])
         closest_results = find_closest_gtf(junction,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_libs)
         if closest_results["donor"]:
             gtf = closest_results["donor"]

@@ -20,7 +20,6 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
         #id_key = id_key.replace("_"," ")
         if id_key in id_to_seq:
             full_seq = id_to_seq[id_key]
-            sys.stderr.write("Found "+id_key+" in consensus building\n")
         else:
             sys.stderr.write("ERROR: Couldn't find sequence "+id_key+" in consensus building\n")
             sys.exit(1)

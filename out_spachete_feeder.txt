@@ -1,4 +1,5 @@
-STATUS:using existing FullStemList.txt
+STATUS: generating FullStemList.txt from KNIFE output directory filenames
+STATUS: finished generating the FullStemList.txt
 Fetal_Adrenal_360_CTTGTA_L006
 Fetal_Adrenal_360_CTTGTA_L006 not in include stems, skipping Fetal_Adrenal_360_CTTGTA_L006
 Fetal_Adrenal_403b_GTCCGC_L008

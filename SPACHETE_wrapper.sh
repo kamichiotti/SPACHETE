@@ -34,7 +34,7 @@
 #    CML UConn samples      #
 #############################
 #KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test/"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test_try/"
 #STEM_INCLUDE_ONLY_LIST=("SRR3192409")
 
 #############################
@@ -59,8 +59,9 @@
 ################################
 #    Normal fetal samples      #
 ################################
-KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_22"
+#KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_22"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test_try/"
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"   "Fetal_Heart_401_AGTCAA_L005"      "Fetal_Kidney_403b_TGACCA_L004"    "Fetal_Lung_395_AGTTCC_L007")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_403b_GTCCGC_L008"  "Fetal_Heart_405_CAGATC_L007"      "Fetal_Liver_364_ATTCCT_L007_001"  "Fetal_Lung_397_ATGTCA_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_405_GTGAAA_L008"   "Fetal_Intestine_360_AGTTCC_L005"  "Fetal_Liver_364_ATTCCT_L007_002"  "Fetal_Lung_408_CCGTCC_L008")
@@ -73,8 +74,9 @@ OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_22"
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_397_CAGATC_L004"     "Fetal_Kidney_360_CGATGT_L007"     "Fetal_Lung_384_CTTGTA_L007"       "Fetal_Stomach_408_GTGAAA_L006")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_399_CTTGTA_L004"     "Fetal_Kidney_397_ACAGTG_L005"     "Fetal_Lung_388_AGTCAA_L007")
 #<---------- Completed up to here --------->#
-#Rerun this job that failed
-STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_397_CAGATC_L004")
+#The following job failed because there were no junctions at all reported back and MACHETE broke
+#I'm not sure why this is occuring, I think it may be related to read-length issues
+#STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_397_CAGATC_L004")
 
 ################################
 #        Bladder samples       #
@@ -141,6 +143,12 @@ STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_397_CAGATC_L004")
 #KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/normal_human_genome/ERR1549500"
 #OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_genome_collapsed"
 
+##############################################################
+#  Just running on cell free DNA from a transplant study:    #
+#            http://www.ncbi.nlm.nih.gov/pubmed/24267896     #
+##############################################################
+#KNIFE_DIR="/scratch/PI/horence/rob/parent_dirs/cfDNA_SRR1024346/single_end"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/cfDNA_SRR1024346_8_25"
 
 
 ######################################################################################
