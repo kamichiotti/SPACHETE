@@ -229,7 +229,7 @@ print("NUM_FILES: "+str(NUM_FILES))
 #ALIGN_PARDIR = "/".join(CIRCPIPE_DIR.split("/")[:-1])+"/"
 #DATASET_NAME = CIRCPIPE_DIR.split("/")[-1]
 #MODE = "complete"
-#NTRIM = "13"
+NTRIM = "13"
 #DENOVOCIRC = "1"
 #NUM_FLANKING = "150"
 #This should be blocking
@@ -248,11 +248,25 @@ spork_process = subprocess.Popen(["python",os.path.join(MACHETE,"SPORK_main.py")
                                     stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 spork_out,spork_err = spork_process.communicate()
 sys.stdout.write(spork_out)
+sys.stdout.flush()
 sys.stderr.write(spork_err)
+sys.stderr.flush()
 write_time("Run spork",start_time,timer_file_path)
 
-#NOTE!!!NOTE stopping execution after SPORK for debugging
-#sys.exit(1)
+#RB NOTE it looks like it is possible for SPORK to yield an empty "fusion-fasta" file to machete, which breaks it
+#RB so I'm first going to see if the file is there, then I'm going to check if the file is empty then I'll just not run MACHETE
+fusion_fasta_path = os.path.join(OUTPUT_DIR,"spork_out","novel_junctions_machete.fasta")
+if not os.path.isfile(fusion_fasta_path):
+    sys.stderr.write("SPORK: Some error in SPORK, didn't create 'fusions-fasta' file, exiting immediately\n")
+    sys.stdout.write("SPORK: Some error in SPORK, didn't create 'fusions-fasta' file, exiting immediately\n")
+    sys.exit(1)
+
+num_fusion_lines = sum(1 for line in open(fusion_fasta_path))
+if num_fusion_lines == 0:
+    sys.stderr.write("SPORK: didn't identify any junctions at all to pass to MACHETE, exiting immediately\n")
+    sys.stdout.write("SPORK: didn't identify any junctions at all to pass to MACHETE, exiting immediately\n")
+    sys.exit(1)
+
 
 #Make the bowtie index building call on the spork fasta
 start_time = time.time()

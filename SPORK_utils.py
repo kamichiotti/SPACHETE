@@ -239,9 +239,17 @@ def find_splice_inds(denovo_junctions,constants_dict):
             #NOTE found that I was forcinng splice sites to be too central if I used the thirds len
             #NOTE and lost BCR-ABL this way, so instead I'll stick with using 1/3 of the consensus
             splice_map_size = thirds_len
-
+            #sys.stderr.write("Cons len "+str(cons_len)+" and thirds_len "+str(splice_map_size)+"\n")
+ 
             five_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(0,cons_len-2*splice_map_size+1)]
             three_prime_list = [junction.consensus[ind:ind+splice_map_size] for ind in range(splice_map_size,cons_len-splice_map_size+1)]
+
+            #Oh this is my problem, sometimes the consensus length is too small
+            #to try and find splice inds from, so I should just throw that out and iterate,
+            #otherwise I'll have blank lines added to my splice ind fa files and they will be
+            #incorrectly formatted
+            if len(five_prime_list) == 0 or len(three_prime_list) == 0:
+                continue
 
             five_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"
                                   +five_prime_list[ind] for ind in range(len(five_prime_list))]
@@ -478,7 +486,7 @@ def generate_gtfs(gtf_path,allowed_feature_types=["exon"]):
     gtf_file_names = [gtf_name for gtf_name in os.listdir(gtf_path) if "gtf" in gtf_name]
     for gtf_file_name in gtf_file_names:
         abs_gtf_file_path = os.path.join(gtf_path,gtf_file_name)
-        sys.stdout.write("Reading in GTF file "+abs_gtf_file_path+"\n")
+        #sys.stdout.write("Reading in GTF file "+abs_gtf_file_path+"\n")
         with open(abs_gtf_file_path,"r") as gtf_file:
             for gtf_line in gtf_file.readlines():
                 gtf = GTFEntry(gtf_line)
@@ -522,8 +530,8 @@ def get_jct_gtf_info(junctions,gtfs,constants_dict):
     # Find the closest gtfs to donor and acceptor
     for junction in junctions:
         jct_ind = junctions.index(junction)
-        message = "Finding gtf info ("+str(jct_ind)+"/"+str(len(junctions))+")"
-        write_time(message,time.time(),constants_dict["timer_file_path"])
+        #message = "Finding gtf info ("+str(jct_ind)+"/"+str(len(junctions))+")"
+        #write_time(message,time.time(),constants_dict["timer_file_path"])
         closest_results = find_closest_gtf(junction,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_libs)
         if closest_results["donor"]:
             gtf = closest_results["donor"]

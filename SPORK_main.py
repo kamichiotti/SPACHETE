@@ -191,9 +191,9 @@ for file_name in file_names:
     full_paths_in = [R1_file]
     if not os.path.isfile(R2_file):
         R2_file = None
-        sys.stdout.write("Not found R2 file: Proceeding with just R1\n")
+        sys.stdout.write("SPORK: Not found R2 file: Proceeding with just R1\n")
     else:
-        sys.stdout.write("Found R2 file :"+R2_file+"\n")
+        sys.stdout.write("SPORK: Found R2 file :"+R2_file+"\n")
         full_paths_in.append(R2_file)
     write_time("Time to find R2 "+str(R2_file).split("/")[-1],start_find_R2,timer_file_path,False) #false overwrites the timer file
 
@@ -234,7 +234,7 @@ for file_name in file_names:
                     combined_out.write(R2_in_file.readline()) #Write out the quality line
                     header_line = R2_in_file.readline()
                     num_total_reads += 1
-    sys.stdout.write("SPORK: created combined fastq file\n")
+    sys.stdout.write("SPORK: created combined fastq file of "+str(num_total_reads)+" total reads\n")
 
     # Process the file to split each read into a 5' and 3' fastq file
     write_time("Starting main portion",time.time(),timer_file_path)
@@ -369,14 +369,14 @@ for file_name in file_names:
         start_build_group_ranges = time.time()
         bin_pair_group_ranges = find_bin_pair_group_ranges(bin_pairs,constants_dict)
         write_time("-Time to build group ranges",start_build_group_ranges,timer_file_path)
-        sys.stdout.write("SPORK: built bin pair group ranges\n")
+        sys.stdout.write("SPORK: built bin pair group ranges for a total of ["+str(len(bin_pair_group_ranges))+"]\n")
 
         # Build the junctions from bin pairs and their ends
         denovo_junctions = []
         start_build_junctions = time.time()
         denovo_junctions = build_junction_sequences(bin_pairs,bin_pair_group_ranges,R_file_path,constants_dict)
         write_time("-Time to build "+str(len(denovo_junctions))+" junctions ",start_build_junctions,timer_file_path)
-        sys.stdout.write("SPORK: built junctions\n")
+        sys.stdout.write("SPORK: built junctions for a total of ["+str(len(denovo_junctions))+"]\n")
         bin_pairs = [] #clearing the bin pairs to free up space
 
         # Write out the ids of the reads used to build junctions
@@ -392,7 +392,7 @@ for file_name in file_names:
         start_find_splice_inds = time.time()
         denovo_junctions,no_splice_jcts = find_splice_inds(denovo_junctions,constants_dict)
         write_time("-Found splice indices of "+str(len(denovo_junctions))+" junctions",start_find_splice_inds,timer_file_path)
-        sys.stdout.write("SPORK: found splice indices\n")
+        sys.stdout.write("SPORK: found splice indices. ["+str(len(denovo_junctions))+"] w/ splice and ["+str(len(no_splice_jcts))+"] w/out splice\n")
 
 
         # Write out the denovo_junctions before collapsing for debugging
@@ -413,7 +413,7 @@ for file_name in file_names:
         collapse_message = "-Time to collapse junctions from "+str(len(denovo_junctions))+" to "+str(len(singular_jcts)+len(collapsed_jcts))
         write_time(collapse_message,start_collapse_junctions,timer_file_path)
         denovo_junctions = singular_jcts+collapsed_jcts
-        sys.stdout.write("SPORK: collapsed junctions\n")
+        sys.stdout.write("SPORK: collapsed junctions down to ["+str(len(denovo_junctions))+"] junctions\n")
 
 
         # Get GTF information for the identified denovo_junctions
@@ -450,14 +450,13 @@ for file_name in file_names:
                 gtf_denovo_junctions.append(reverse_jct)
 
         write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
-        sys.stdout.write("SPORK: got gtf info for junctions\n")
-        sys.stdout.write(str(len(denovo_junctions))+"\n")
+        sys.stdout.write("SPORK: got gtf info for ["+str(len(denovo_junctions))+"] junctions\n")
 
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()
         fusion_junctions = identify_fusions(denovo_junctions,constants_dict)
-        sys.stderr.write("Number of fusion jcts found = "+str(len(fusion_junctions))+"\n")
+        sys.stdout.write("SPORK: Number of fusion jcts found = "+str(len(fusion_junctions))+"\n")
         write_time("Time to identify fusions "+R_file_name,start_identify_fusions,timer_file_path)
 
         #########################################################
