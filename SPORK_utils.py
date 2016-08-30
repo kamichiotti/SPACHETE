@@ -231,10 +231,13 @@ def find_splice_inds(denovo_junctions,constants_dict):
         write_time("--Using existing files in splice ind id",time.time(),constants_dict["timer_file_path"])
     else:
         # Write out all the possible splice sites for every jct out to a 5' and 3' file
+        num_size_excluded = 0
+        avg_cons_len = 0
         for jct_ind in range(len(denovo_junctions)):
             sys.stdout.flush()
             junction = denovo_junctions[jct_ind]
             cons_len = len(junction.consensus)
+            avg_cons_len = (float(jct_ind*avg_cons_len)/(jct_ind+1))+(float(cons_len)/(jct_ind+1))
             #splice_map_size = len(junction.consensus)/3
             #NOTE found that I was forcinng splice sites to be too central if I used the thirds len
             #NOTE and lost BCR-ABL this way, so instead I'll stick with using 1/3 of the consensus
@@ -249,6 +252,7 @@ def find_splice_inds(denovo_junctions,constants_dict):
             #otherwise I'll have blank lines added to my splice ind fa files and they will be
             #incorrectly formatted
             if len(five_prime_list) == 0 or len(three_prime_list) == 0:
+                num_size_excluded += 1
                 continue
 
             five_prime_fa_list = [">jct_"+str(jct_ind)+"_ind_"+str(ind)+"\n"
@@ -262,6 +266,8 @@ def find_splice_inds(denovo_junctions,constants_dict):
         # Don't forget to close the files :)
         five_temp_file.close()
         three_temp_file.close()
+        sys.stdout.write("SPORK: Average consensus length ["+str(avg_cons_len)+"]\n")
+        sys.stdout.write("SPORK: Splitting fqs, size excluded ["+str(num_size_excluded)+"] of ["+str(len(denovo_junctions))+"]\n")
        
         # Map the temp files above to the reference and save in temp sam files
         # Need to specify the -f flag because the inputs are fasta files

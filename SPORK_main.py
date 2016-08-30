@@ -91,7 +91,7 @@ ref_gap_score = "--rfg 50,50"           #read gap set to be very high to not all
 min_score = "--score-min L,0,-0.10"     #minimum allowed Bowtie2 score
 allowed_mappings = "1"                  #allowed mappings of a given read. Currently not implemented
 
-thirds_len = 36                         #length to cut the original reads into for the 5' and 3' pieces:
+thirds_len = 25                         #length to cut the original reads into for the 5' and 3' pieces:
                                         #   |-------|---------------|-------|
                                         #       ^     unused middle     ^
                                         #       |                       |
@@ -267,6 +267,8 @@ for file_name in file_names:
                         if fragment_5 and fragment_3:
                             five_prime_file.write(str(fragment_5))
                             three_prime_file.write(str(fragment_3))
+                        else:
+                            sys.stderr.write("Length filtered ["+str(len(fastq_read.seq))+"] read\n")
                         read_num_to_read_id[formatted_read_id] = read_id.strip()
                         read_id = f_in.readline()
                         read_num += 1
