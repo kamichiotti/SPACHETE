@@ -67,7 +67,7 @@ mode = args.mode
 #Check if there is an orig in the right spot
 orig_dir = os.path.join(input_dir,"orig")
 if not os.path.exists(orig_dir):
-    sys.stderr.write("ERROR: No orig directory found in --input-dir\n")
+    sys.stderr.write("SPORK ERROR: No orig directory found in --input-dir\n")
     sys.exit(1)
 
 #Set defaults if not given
@@ -91,7 +91,7 @@ ref_gap_score = "--rfg 50,50"           #read gap set to be very high to not all
 min_score = "--score-min L,0,-0.10"     #minimum allowed Bowtie2 score
 allowed_mappings = "1"                  #allowed mappings of a given read. Currently not implemented
 
-thirds_len = 25                         #length to cut the original reads into for the 5' and 3' pieces:
+thirds_len = 36                         #length to cut the original reads into for the 5' and 3' pieces:
                                         #   |-------|---------------|-------|
                                         #       ^     unused middle     ^
                                         #       |                       |
@@ -180,6 +180,9 @@ for file_name in file_names:
     constants_dict["timer_file_path"] = timer_file_path
     genome_sam_dir = os.path.join(orig_dir,"genome/")
     constants_dict["genome_sam_dir"] = genome_sam_dir
+    params_out_path = os.path.join(output_dir,"params.txt")
+    constants_dict["params_out_path"] = params_out_path
+    write_constants_dict(constants_dict,params_out_path)
 
     # Identify whether there is an R2 present in the same directory as the R1
     start_find_R2 = time.time()
@@ -249,12 +252,12 @@ for file_name in file_names:
         write_time("Using previous split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
         read_num_to_read_id = pickle.load(open(read_num_to_id_name,"rb"))
     else:
+        read_num = 0
         with open(five_prime_fq_name, "w") as five_prime_file:
             with open(three_prime_fq_name, "w") as three_prime_file:
                 with open(R_file_path, "r") as f_in:
                     read_id = f_in.readline()
                     read_num_format = "0"+str(len(str(num_total_reads)))+"d"
-                    read_num = 0
                     while read_id:
                         seq = f_in.readline()
                         plus_line = f_in.readline()
@@ -267,14 +270,16 @@ for file_name in file_names:
                         if fragment_5 and fragment_3:
                             five_prime_file.write(str(fragment_5))
                             three_prime_file.write(str(fragment_3))
-                        else:
-                            sys.stderr.write("Length filtered ["+str(len(fastq_read.seq))+"] read\n")
-                        read_num_to_read_id[formatted_read_id] = read_id.strip()
+                            read_num_to_read_id[formatted_read_id] = read_id.strip()
+                            read_num += 1
                         read_id = f_in.readline()
-                        read_num += 1
         pickle.dump(read_num_to_read_id,open(read_num_to_id_name,"wb"))
         write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
-    sys.stdout.write("SPORK: made split unaligned read files\n")
+        sys.stdout.write("SPORK: made ["+str(read_num)+"] split unaligned reads\n")
+        if read_num == 0:
+            sys.stdout.write("SPORK: no reads long enough to split, exiting immediately")
+            sys.stderr.write("SPORK: no reads long enough to split, exiting immediately")
+            sys.exit(0)
     constants_dict["read_num_to_read_id"] = read_num_to_read_id
 
     # Map the 5' and 3' split files to the reference to generate the sam files
@@ -312,11 +317,11 @@ for file_name in file_names:
     # [5] Collapse the denovo jcts
     # [6] Get GTF annotation data for each jct
     # [7] Write out the denovo jcts
-    fasta_for_bowtie_index_name = os.path.join(output_dir,"novel_junctions.fasta")
+    junction_fasta_name = os.path.join(output_dir,"novel_junctions.fasta")
     gtfs = generate_gtfs(gtf_path)
 
-    if use_prior and os.path.isfile(fasta_for_bowtie_index_name):
-        write_time("Using prior jcts: "+fasta_for_bowtie_index_name,time.time(),timer_file_path)
+    if use_prior and os.path.isfile(junction_fasta_name):
+        write_time("Using prior jcts: "+junction_fasta_name,time.time(),timer_file_path)
     else:
         # Store all five prime mappings by base_read_id (read_id w/out 5_prime or 3_prime)
         # There should not be two identical base_read_id's
@@ -330,7 +335,7 @@ for file_name in file_names:
                 sam_entry = SAMEntry(sam_line)
                 base_read_id = sam_entry.read_id.replace("/5_prime","")
                 if base_read_id in id_to_sam_dict:
-                    sys.stderr.write("ERROR: Found duplicate base_read_id in 5_prime mappings\n")
+                    sys.stderr.write("SPORK ERROR: Found duplicate base_read_id in 5_prime mappings\n")
                     sys.stderr.write(base_read_id+"\n")
                     sys.exit(1)
                 # Filter out some of the strange chromosomes: (e.g. chrUn_gl000220)
@@ -465,30 +470,25 @@ for file_name in file_names:
         # Write out the denovo_junction_sequences for each file #
         #########################################################
         start_save_denovo_junctions = time.time()
-        machete_style_name = os.path.join(output_dir,"novel_junctions_machete.fasta")
-        jct_style_file_name = os.path.join(output_dir,"novel_junctions.jct")
+        log_style_name = os.path.join(output_dir,"novel_junctions.log")
         fusions_file_name = os.path.join(output_dir,"novel_fusions.fasta")
 
         # Open the three output files
-        fasta_for_bowtie_index = open(fasta_for_bowtie_index_name, "w")
+        junction_fasta = open(junction_fasta_name, "w")
         machete_style_file = open(machete_style_name, "w")
-        jct_style_file = open(jct_style_file_name, "w")
         fusions_file = open(fusions_file_name, "w")
 
         # Loop through the denovo junctions writing them where necessary
         for denovo_junction in denovo_junctions:
-            jct_ind = denovo_junctions.index(denovo_junction)
             #NOTE change back to verbose_fasta_string()
-            fasta_for_bowtie_index.write(denovo_junction.fasta_string())
-            machete_style_file.write(denovo_junction.fasta_MACHETE())
-            jct_style_file.write(str(denovo_junction)+"\n")
+            junction_fasta.write(denovo_junction.fasta_MACHETE())
+            log_style_name.write(denovo_junction.log_string())
             if denovo_junction in fusion_junctions:
                 fusions_file.write(denovo_junction.fasta_MACHETE())
 
         # Close the three output files
-        fasta_for_bowtie_index.close()
+        junction_fasta.close()
         machete_style_file.close()
-        jct_style_file.close()
         fusions_file.close()
         write_time("Time to save denovo junctions "+R_file_name,start_save_denovo_junctions,timer_file_path)
         sys.stdout.write("SPORK: saved all output\n")
@@ -497,7 +497,7 @@ for file_name in file_names:
            
 write_time("Entire time",start_entire_time,timer_file_path)
 sys.stdout.write("SPORK: completed\n")
-
+sys.exit(0)
 
 
 

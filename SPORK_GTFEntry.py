@@ -39,8 +39,8 @@ class GTFEntry(object):
             gene_id_pattern = re.compile('gene_id "(.*?)";')
             gene_name = gene_id_pattern.findall(group_info)
             if len(gene_name) == 0:
-                print "Error in gtf init. No found gene_name or gene_id"
-                sys.stderr.write("Error in gtf init. No found gene_name or gene_id")
+                sys.stdout.write("SPORK ERROR: in gtf init. No found gene_name or gene_id")
+                sys.stderr.write("SPORK ERROR: in gtf init. No found gene_name or gene_id")
                 sys.exit(1)
         self.gene_name = gene_name[0]
 

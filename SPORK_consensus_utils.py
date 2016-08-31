@@ -21,7 +21,7 @@ def build_and_score_consensus(mapped_reads,strand,id_to_seq,bin_size,constants_d
         if id_key in id_to_seq:
             full_seq = id_to_seq[id_key]
         else:
-            sys.stderr.write("ERROR: Couldn't find sequence "+id_key+" in consensus building\n")
+            sys.stderr.write("SPORK ERROR: Couldn't find sequence "+id_key+" in consensus building\n")
             sys.exit(1)
         mapped_read.read_id = id_key
         left_padding = int(mapped_read.start%bin_size) if strand == "+" else int(bin_size-mapped_read.start%bin_size)

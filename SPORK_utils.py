@@ -140,6 +140,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
 
     # walk through each bin_pair_group
     write_time("Working on the bin-pairs :"+str(len(bin_pair_group_ranges)),time.time(),constants_dict["timer_file_path"])
+    jct_ind = 0
     for bin_pair_group_range in bin_pair_group_ranges:
         #junction_num = "("+str(bin_pair_group_ranges.index(bin_pair_group_range)+1)+"/"+str(len(bin_pair_group_ranges))+")"
         #print junction_num
@@ -182,9 +183,9 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
         """
         # If the bin score is high enough then add it
         if bin_score < consensus_score_cutoff:
-            denovo_junction = Junction(bin_consensus,bin_score,group_members,took_reverse_compliment,constants_dict)
+            denovo_junction = Junction(bin_consensus,bin_score,group_members,jct_ind,took_reverse_compliment,constants_dict)
             denovo_junctions.append(denovo_junction)
-
+            jct_ind += 1
 
     return denovo_junctions
 
@@ -952,6 +953,37 @@ def reverse_compliment(seq):
 
     rev_comp_seq = "".join([comp_dict[base] for base in seq])[::-1]
     return rev_comp_seq
+
+
+################################################################
+#   Print out the constants dict for better version tracking   #
+################################################################
+def write_constants_dict(constants_dict,params_out_name):
+    """
+    Goal: print out the constants dict to inform what parameters were used on the run
+    Arguments:
+        constants_dict is a dict keyed by string and valued by numeric or string
+        params_out_name is the file path to store the constants dict info
+    Returns:
+        None, everything is written to the file
+    """
+    uniform_len = max([len(str(key)) for key in constants_dict])
+    spaces = " "*uniform_len
+
+    with open(params_out_name,"w") as params_out:
+        #Header info with date and time
+        params_out.write("Parameter file used for SPORK run\n")
+        params_out.write("\tDate "+time.strftime("%d/%m/%y")+" (day/month/year)\n")
+        params_out.write("\tTime "+time.strftime("%H:%M:%S")+"\n")
+        params_out.write("\nParameters:\n")
+        params_out.write("-"*(uniform_len+4)+"\n")
+
+        #Loop through the parameters printing nicely
+        len_sorted_params = sorted(constants_dict.keys(),key=lambda k: len(k))
+        for param in len_sorted_params:
+            padded_param = param[:uniform_len]+spaces[:uniform_len-len(param)]
+            param_val = str(constants_dict[param])
+            params_out.write(padded_param+"    :    "+param_val+"\n")
 
 ###################################
 #   Track NUP214 as a test case   #

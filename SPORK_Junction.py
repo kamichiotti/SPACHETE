@@ -10,7 +10,7 @@ class Junction(object):
     __slots__ = ["consensus","score","bin_pair","bin_pair_group","took_reverse_compliment","constants_dict",
                  "donor_sam","acceptor_sam","jct_ind"]
 
-    def __init__(self,consensus,score,bin_pair_group,took_reverse_compliment,constants_dict):
+    def __init__(self,consensus,score,bin_pair_group,jct_ind,took_reverse_compliment,constants_dict):
         """
         Goal: Initialization function of junction
         Arguments:
@@ -27,6 +27,7 @@ class Junction(object):
         self.consensus = consensus
         self.score = score
         self.bin_pair_group = bin_pair_group
+        self.jct_ind = jct_ind
         self.took_reverse_compliment = took_reverse_compliment
         self.constants_dict = constants_dict
 
@@ -220,7 +221,7 @@ class Junction(object):
             a tuple of Junction where the first entry is self and the
             second is a reverse compliment of self
         """
-        rev_self = Junction(self.consensus,self.score,self.bin_pair_group,self.took_reverse_compliment,self.constants_dict)
+        rev_self = Junction(self.consensus,self.score,self.bin_pair_group,self.jct_ind,self.took_reverse_compliment,self.constants_dict)
         rev_self.took_reverse_compliment = not rev_self.took_reverse_compliment
 
         comp = {"A":"T","a":"t","T":"A","t":"a",
@@ -315,6 +316,7 @@ class Junction(object):
         fasta_str += ",num="+str(len(self.bin_pair_group))
         fasta_str += ",score="+str(self.score)
         fasta_str += ",gap="+str(self.splice_gap())
+        fasta_str += ",jct_ind="+str(self.jct_ind)
         fasta_str += "\n"
 
         #Add the actual padded consensus to the output string
@@ -325,8 +327,8 @@ class Junction(object):
         return fasta_str
 
 
-    #Format the junction to print in fasta form
-    def fasta_string(self,jct_ind=False):
+    #Format the junction to print in fasta-esque form
+    def log_string(self):
         """
         Goal: produce a fasta_string
         Arguments:
@@ -358,7 +360,7 @@ class Junction(object):
         #fasta_str += "fusion:"+str(self.check_fusion())+"|" #seems like unnecessary info at this point
         fasta_str += "num:"+str(len(self.bin_pair_group))+"|"
         fasta_str += "splice:"+str(self.splice_type())+"|"
-        fasta_str += "jct_ind:"+str(jct_ind)+"|\n" if jct_ind else "\n"
+        fasta_str += "jct_ind:"+str(self.jct_ind)+"|\n"
 
         splice_flank_len = int(self.constants_dict["splice_flank_len"])
         full_consensus = self.format_consensus(splice_flank_len)
@@ -399,6 +401,7 @@ class Junction(object):
         fasta_str += "boundary_dist2:"+str(self.boundary_dist("acceptor"))+"|"
         fasta_str += "at_boundary2:"+str(self.at_boundary("acceptor"))+"|_|"
 
+        fasta_str += "jct_ind:"+str(self.jct_ind)+"|"
         fasta_str += "splice:"+str(self.splice_ind())+"|"
         fasta_str += "span:"+str(self.span())+"|"
         fasta_str += "score:"+str(self.score)+"|"
@@ -453,7 +456,7 @@ class Junction(object):
             if donor_id == acceptor_id:
                 read_ids.append(donor_id)
             else:
-                sys.stderr.write("ERROR, nonmatching ids in jct: ["+donor_id+"] vs ["+acceptor_id+"]\n")
+                sys.stderr.write("SPORK ERROR, nonmatching ids in jct: ["+donor_id+"] vs ["+acceptor_id+"]\n")
                 sys.exit(1)
 
         return read_ids
