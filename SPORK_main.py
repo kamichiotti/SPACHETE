@@ -475,14 +475,14 @@ for file_name in file_names:
 
         # Open the three output files
         junction_fasta = open(junction_fasta_name, "w")
-        machete_style_file = open(machete_style_name, "w")
+        log_style_file = open(log_style_name, "w")
         fusions_file = open(fusions_file_name, "w")
 
         # Loop through the denovo junctions writing them where necessary
         for denovo_junction in denovo_junctions:
             #NOTE change back to verbose_fasta_string()
             junction_fasta.write(denovo_junction.fasta_MACHETE())
-            log_style_name.write(denovo_junction.log_string())
+            log_style_file.write(denovo_junction.log_string())
             if denovo_junction in fusion_junctions:
                 fusions_file.write(denovo_junction.fasta_MACHETE())
 

@@ -122,7 +122,7 @@ class Junction(object):
 
 
     #Check to see if this jct represents a fusion
-    def check_fusion(self,span_cutoff=1e6):
+    def get_fusion_type(self,span_cutoff=1e6):
         """
         Goal: check if this junction represents a fusion
         Arguments:
@@ -132,16 +132,50 @@ class Junction(object):
             bool of whether or not the donor and acceptor have different genes
             if one or more don't exists then return False
         """
+        fusion = "" #Can be 'fusion', 'donor', 'acceptor', or 'none'
+        chroms = "" #Can be 'interchrom', 'distant-intrachrom', or 'local-intrachrom'
+        strand = "" #Can be 'inversion', 'plus', or 'minus'
+        revreg = "" #Can be 'rev', 'reg', or 'invert'
+        
+        #Get the fusion type
         if self.at_boundary("donor") and self.at_boundary("acceptor"):
-            if self.donor_sam.chromosome != self.acceptor_sam.chromosome:
-                return True
-            elif self.donor_sam.strand != self.acceptor_sam.strand:
-                return True
-            elif abs(self.span()) > span_cutoff:
-                return True
+            fusion = "fusion"
+        elif self.at_boundary("donor"):
+            fusion = "donor"
+        elif self.at_boundary("acceptor"):
+            fusion = "acceptor"
+        else:
+            fusion = "niether"
 
-        #If none of the previous ifs are hit, return false
-        return False
+        #Get the chromosomes type
+        if self.donor_sam.chromosome != self.acceptor_sam.chromosome:
+            chroms = "interchrom"
+        elif self.span() >= span_cutoff:
+            chroms = "distant-intrachrom"
+        else:
+            chroms = "local-intrachrom"
+
+        #Get the strand type
+        if self.donor_sam.strand != self.acceptor_sam.strand:
+            strand = "inversion"
+        elif self.donor_sam.strand == "+":
+            strand = "+"
+        elif self.donor_sam.strand == "-":
+            strand = "-"
+
+        #Get the revreg type
+        if strand == "inversion":
+            revreg = "invert"
+        elif self.donor_sam.donor < self.acceptor_sam.acceptor and self.donor_sam.strand == "+":
+            revreg = "reg"
+        elif self.donor_sam.donor > self.acceptor_sam.acceptor and self.donor_sam.strand == "-":
+            revreg = "reg"
+        else:
+            revreg = "rev"
+            
+        #Concatenate them into one string
+        fusion_type = fusion+"_"+chroms+"_"+strand+"_"+revreg
+        return fusion_type
 
 
     #Get distance to closest splice boundary
@@ -305,17 +339,19 @@ class Junction(object):
         pos2 = self.acceptor_sam.acceptor()
         strand1 = self.donor_sam.strand
         strand2 = self.acceptor_sam.strand
-        fusion = "fusion" if self.check_fusion() else "no_fusion"
+        fusion_type = self.get_fusion_type()
 
         #Start building the fasta string
         fasta_str = ""
         fasta_str += ">"
         fasta_str += str(chrom1)+":"+str(genes1)+":"+str(pos1)+":"+str(strand1)+"|"
         fasta_str += str(chrom2)+":"+str(genes2)+":"+str(pos2)+":"+str(strand2)+"|"
-        fasta_str += fusion
+        fasta_str += fusion_type
         fasta_str += ",num="+str(len(self.bin_pair_group))
         fasta_str += ",score="+str(self.score)
         fasta_str += ",gap="+str(self.splice_gap())
+        fasta_str += ",don-dist:"+str(self.boundary_dist("donor"))
+        fasta_str += ",acc-dist:"+str(self.boundary_dist("acceptor"))
         fasta_str += ",jct_ind="+str(self.jct_ind)
         fasta_str += "\n"
 
@@ -357,7 +393,7 @@ class Junction(object):
 
         fasta_str += "|splice:"+str(self.splice_ind())+"|"
         fasta_str += "score:"+str(self.score)+"|"
-        #fasta_str += "fusion:"+str(self.check_fusion())+"|" #seems like unnecessary info at this point
+        fasta_str += "fusion:"+str(self.get_fusion_type())+"|"
         fasta_str += "num:"+str(len(self.bin_pair_group))+"|"
         fasta_str += "splice:"+str(self.splice_type())+"|"
         fasta_str += "jct_ind:"+str(self.jct_ind)+"|\n"
@@ -405,7 +441,7 @@ class Junction(object):
         fasta_str += "splice:"+str(self.splice_ind())+"|"
         fasta_str += "span:"+str(self.span())+"|"
         fasta_str += "score:"+str(self.score)+"|"
-        fasta_str += "fusion:"+str(self.check_fusion())+"|"
+        fasta_str += "fusion:"+str(self.get_fusion_type())+"|"
         fasta_str += "num:"+str(len(self.bin_pair_group))+"|"
         fasta_str += "splice-gap:"+str(self.splice_gap())+"|"
         fasta_str += "splice-type:"+str(self.splice_type())+"|"

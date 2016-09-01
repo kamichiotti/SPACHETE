@@ -256,7 +256,8 @@ write_time("Run spork",start_time,timer_file_path)
 
 #RB NOTE it looks like it is possible for SPORK to yield an empty "fusion-fasta" file to machete, which breaks it
 #RB so I'm first going to see if the file is there, then I'm going to check if the file is empty, if so I'll just not run MACHETE
-fusion_fasta_path = os.path.join(OUTPUT_DIR,"spork_out","novel_junctions.fasta")
+SPORK_FASTA= os.path.join("spork_out","novel_junctions.fasta")
+fusion_fasta_path = os.path.join(OUTPUT_DIR,SPORK_FASTA)
 if not os.path.isfile(fusion_fasta_path):
     if str(spork_ret_code) == "0":
         sys.stderr.write("SPORK: exited fine but didn't create 'fusions-fasta' file, likely problem with input file\n")
@@ -282,7 +283,6 @@ if num_fusion_lines == 0:
 
 #Make the bowtie index building call on the spork fasta
 start_time = time.time()
-SPORK_FASTA="spork_out/novel_junctions_machete.fasta"
 print("STATUS:make FJ bowtie indices for each experiment")
 processes = {}
 for index in range(1,NUM_FILES + 1):
