@@ -640,15 +640,15 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
 #####################################
 #Takes junctions that already have gtf info
 #If a junction has the following properties call it a 'fusion':
-#   If donor and acceptor sams are at_boundary:
-#       If donor and acceptor are on different chromosomes
+#   IF donor and acceptor sams are at_boundary:
+#       IF donor and acceptor are on different chromosomes
 #           [yes fusion]
 #       ELIF donor and acceptor are on different strands
 #       ELIF distance between donor and acceptor > threshold
 #           [yes fusion]
 #       ELSE
 #           [no fusion]
-#   Else:
+#   ELSE:
 #       [no fusion]
 #
 #Returns a list of junctions that are deemed 'fusions'
@@ -670,7 +670,7 @@ def identify_fusions(junctions,constants_dict):
                 fusion_jcts.append(jct)
             elif jct.donor_sam.strand != jct.acceptor_sam.strand:
                 fusion_jcts.append(jct)
-            elif abs(jct.span()) > span_cutoff:
+            elif jct.span() > span_cutoff:
                 fusion_jcts.append(jct)
     
     return fusion_jcts

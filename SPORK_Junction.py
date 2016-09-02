@@ -84,12 +84,13 @@ class Junction(object):
             none
 
         Returns:
-            if both exist subtract the stop of the acceptor
-            from the donor start position (can be negative)
+            if both exist subtract the donor and acceptor sites
+            this distance will always be positive
             if one or both don't exist just return -1
         """
         if self.donor_sam.exists and self.acceptor_sam.exists:
-            return self.donor_sam.start-self.acceptor_sam.stop
+            span = self.donor_sam.donor()-self.acceptor_sam.acceptor()
+            return abs(span)
         else:
             return -1
 
@@ -139,7 +140,7 @@ class Junction(object):
         
         #Get the fusion type
         if self.at_boundary("donor") and self.at_boundary("acceptor"):
-            fusion = "fusion"
+            fusion = "both"
         elif self.at_boundary("donor"):
             fusion = "donor"
         elif self.at_boundary("acceptor"):
@@ -159,9 +160,9 @@ class Junction(object):
         if self.donor_sam.strand != self.acceptor_sam.strand:
             strand = "inversion"
         elif self.donor_sam.strand == "+":
-            strand = "+"
+            strand = "plus"
         elif self.donor_sam.strand == "-":
-            strand = "-"
+            strand = "minus"
 
         #Get the revreg type
         if strand == "inversion":
