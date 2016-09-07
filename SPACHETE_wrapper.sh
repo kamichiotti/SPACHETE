@@ -33,9 +33,10 @@
 #############################
 #    CML UConn samples      #
 #############################
-#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_uconn_8_31/"
-#STEM_INCLUDE_ONLY_LIST=("SRR3192410")
+KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_uconn_9_5_nup214/"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192410" "SRR3192411" "SRR3192412")
+STEM_INCLUDE_ONLY_LIST=("SRR3192409")
 
 #############################
 #     CML test samples      #
@@ -46,8 +47,8 @@
 #################################
 #    Normal breast samples      #
 #################################
-KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_9_1_36-cutoff-glm"
+#KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_9_6"
 #STEM_INCLUDE_ONLY_LIST=("SRR1027188")
 
 ######################################

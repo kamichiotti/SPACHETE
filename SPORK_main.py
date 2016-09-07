@@ -401,6 +401,55 @@ for file_name in file_names:
         write_time("-Found splice indices of "+str(len(denovo_junctions))+" junctions",start_find_splice_inds,timer_file_path)
         sys.stdout.write("SPORK: found splice indices. ["+str(len(denovo_junctions))+"] w/ splice and ["+str(len(no_splice_jcts))+"] w/out splice\n")
 
+        # Get GTF information for the identified denovo_junctions
+        # Trying forward and rev-comp junction to see which one is closer to gtfs
+        start_get_jct_gtf_info = time.time()
+        forward_jcts = []
+        reverse_jcts = []
+        
+        for jct in denovo_junctions:
+            #jct.bin_pair_group = []
+            #write_time("Got here ",time.time(),timer_file_path)
+            forward_jct,reverse_jct = jct.yield_forward_and_reverse()
+            forward_jcts.append(forward_jct)
+            reverse_jcts.append(reverse_jct)
+        
+        start_time = time.time()
+        write_time("About to call forward on ["+str(len(forward_jcts))+"]",time.time(),timer_file_path) 
+        get_jct_gtf_info(forward_jcts,gtfs,constants_dict)
+        write_time("Time to get jct gtf info forwards for ["+str(len(forward_jcts))+"]",start_time,timer_file_path)
+
+        start_time = time.time()
+        write_time("About to call reverse on ["+str(len(reverse_jcts))+"]",time.time(),timer_file_path)
+        get_jct_gtf_info(reverse_jcts,gtfs,constants_dict)
+        write_time("Time to get jct gtf info backwards ["+str(len(reverse_jcts))+"]",start_time,timer_file_path)
+        
+        gtf_denovo_junctions = []
+        for jct_ind in range(len(denovo_junctions)):
+            forward_jct = forward_jcts[jct_ind]
+            reverse_jct = reverse_jcts[jct_ind]
+            forward_dist = abs(forward_jct.boundary_dist("donor"))+abs(forward_jct.boundary_dist("acceptor"))
+            reverse_dist = abs(reverse_jct.boundary_dist("donor"))+abs(reverse_jct.boundary_dist("acceptor"))
+            
+            #For tracking NUP214-XKR3, which is currently getting reported backwards and incorrectly
+            if(forward_jct.donor_sam.str_gene() == "NUP214" or
+               forward_jct.acceptor_sam.str_gene() == "NUP214" or
+               reverse_jct.donor_sam.str_gene() == "NUP214" or
+               reverse_jct.acceptor_sam.str_gene() == "NUP214"):
+                sys.stdout.write("===========================\n")
+                sys.stdout.write(forward_jct.log_string())
+                sys.stdout.write(reverse_jct.log_string())
+
+            if forward_dist < reverse_dist:
+                sys.stdout.write("Using forward jct\n")
+                gtf_denovo_junctions.append(forward_jct)
+            else:
+                sys.stdout.write("Using reverse jct\n")
+                gtf_denovo_junctions.append(reverse_jct)
+
+        denovo_junctions = gtf_denovo_junctions
+        write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
+        sys.stdout.write("SPORK: got gtf info for ["+str(len(denovo_junctions))+"] junctions\n")
 
         # Write out the denovo_junctions before collapsing for debugging
         start_write_pre_collapsed = time.time()
@@ -421,44 +470,6 @@ for file_name in file_names:
         write_time(collapse_message,start_collapse_junctions,timer_file_path)
         denovo_junctions = singular_jcts+collapsed_jcts
         sys.stdout.write("SPORK: collapsed junctions down to ["+str(len(denovo_junctions))+"] junctions\n")
-
-
-        # Get GTF information for the identified denovo_junctions
-        # Trying forward and rev-comp junction to see which one is closer to gtfs
-        start_get_jct_gtf_info = time.time()
-        forward_jcts = []
-        reverse_jcts = []
-        
-        for jct in denovo_junctions:
-            #jct.bin_pair_group = []
-            #write_time("Got here ",time.time(),timer_file_path)
-            forward_jct,reverse_jct = jct.yield_forward_and_reverse()
-            forward_jcts.append(forward_jct)
-            reverse_jcts.append(reverse_jct)
-        
-        start_time = time.time()
-        write_time("About to call forward ",time.time(),timer_file_path)
-        get_jct_gtf_info(forward_jcts,gtfs,constants_dict)
-        write_time("Time to get jct gtf info forwards "+R_file_name,start_time,timer_file_path)
-        start_time = time.time()
-        get_jct_gtf_info(reverse_jcts,gtfs,constants_dict)
-        write_time("Time to get jct gtf info backwards "+R_file_name,start_time,timer_file_path)
-        
-        gtf_denovo_junctions = []
-        for jct_ind in range(len(denovo_junctions)):
-            forward_jct = forward_jcts[jct_ind]
-            reverse_jct = reverse_jcts[jct_ind]
-            forward_dist = forward_jct.boundary_dist("donor")+forward_jct.boundary_dist("acceptor")
-            reverse_dist = reverse_jct.boundary_dist("donor")+reverse_jct.boundary_dist("acceptor")
-            
-            if forward_dist < reverse_dist:
-                gtf_denovo_junctions.append(forward_jct)
-            else:
-                gtf_denovo_junctions.append(reverse_jct)
-
-        write_time("Time to get full jct gtf info "+R_file_name,start_get_jct_gtf_info,timer_file_path)
-        sys.stdout.write("SPORK: got gtf info for ["+str(len(denovo_junctions))+"] junctions\n")
-
 
         # Identify fusions from the junctions
         start_identify_fusions = time.time()

@@ -1,7 +1,19 @@
-SRR1594020
-SRR1594021
-SRR1594022
-SRR1594023
-SRR1594024
-SRR1594025
+STATUS: using existing FullStemList.txt
+SRR3192409
+SRR3192410
+SRR3192410 not in include stems, skipping SRR3192410
+SRR3192411
+SRR3192411 not in include stems, skipping SRR3192411
+SRR3192412
+SRR3192412 not in include stems, skipping SRR3192412
+SRR3192413
+SRR3192413 not in include stems, skipping SRR3192413
+SRR3192415
+SRR3192415 not in include stems, skipping SRR3192415
+SRR3192416
+SRR3192416 not in include stems, skipping SRR3192416
+SRR3192417
+SRR3192417 not in include stems, skipping SRR3192417
+SRR3192422
+SRR3192422 not in include stems, skipping SRR3192422
 Finished spachete feeder

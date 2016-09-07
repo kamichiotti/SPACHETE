@@ -133,20 +133,20 @@ class Junction(object):
             bool of whether or not the donor and acceptor have different genes
             if one or more don't exists then return False
         """
-        fusion = "" #Can be 'fusion', 'donor', 'acceptor', or 'none'
+        anonat = "" #Can be 'bot', 'donor', 'acceptor', or 'none'
         chroms = "" #Can be 'interchrom', 'distant-intrachrom', or 'local-intrachrom'
         strand = "" #Can be 'inversion', 'plus', or 'minus'
         revreg = "" #Can be 'rev', 'reg', or 'invert'
         
-        #Get the fusion type
+        #Get the anonat type
         if self.at_boundary("donor") and self.at_boundary("acceptor"):
-            fusion = "both"
+            anonat = "both"
         elif self.at_boundary("donor"):
-            fusion = "donor"
+            anonat = "donor"
         elif self.at_boundary("acceptor"):
-            fusion = "acceptor"
+            anonat = "acceptor"
         else:
-            fusion = "niether"
+            anonat = "niether"
 
         #Get the chromosomes type
         if self.donor_sam.chromosome != self.acceptor_sam.chromosome:
@@ -174,35 +174,73 @@ class Junction(object):
         else:
             revreg = "rev"
             
+        #Should this be considered a fusion?
+        fusion = "no_fusion"
+        if anonat == "both":
+            if chroms != "local-intrachrom":
+                fusion = "fusion"
+            elif strand == "inversion":
+                fusion = "fusion"
+
         #Concatenate them into one string
-        fusion_type = fusion+"_"+chroms+"_"+strand+"_"+revreg
+        fusion_type = fusion+"-"+anonat+"_"+chroms+"_"+strand+"_"+revreg
         return fusion_type
 
 
     #Get distance to closest splice boundary
-    def boundary_dist(self,splice_site):
+    def boundary_dist(self,splice_site,bowtie_style=True):
         """
         Goal: get the distance of the specified splice site from the closest exon
         Arguments:
             splice_site which is a string and can be either "donor" or "acceptor"
+            bowtie_style is an optional boolean argument
+                if True (default), then if a donor/acceptor falls to the 'right' of the gtf-site,
+                regardless of strand, it will be a positive distance
+
+                if False, then the strand does matter, and being 5' of gtf is negative and 3' is positive
+
 
         Returns:
-            the min distance to any exon of the specified splice_site
-            if the specified splice_site is not specified, then returns -1
+            the distance to the closest gtf of the specified splice_site
+            the distance being positive or negative means different things based on the bowtie_style parameter
+            explained above
         """
         #If donor distance is requested
         if splice_site == "donor" and self.donor_sam.gtf:
-            donor_dist = abs(self.donor_sam.donor()-self.donor_sam.gtf.donor)
+            donor_dist = 0
+            if not bowtie_style:
+                if self.donor_sam.strand == "+":
+                    donor_dist = self.donor_sam.donor()-self.donor_sam.gtf.donor
+                elif self.donor_sam.strand == "-":
+                    donor_dist = self.donor_sam.gtf.donor-self.donor_sam.donor()
+                else:
+                    sys.stderr.write("SPORK ERROR: in Junction boundary dist, incorrect strand option \n")
+                    sys.exit(1)
+            elif bowtie_style:
+                donor_dist = self.donor_sam.donor()-self.donor_sam.gtf.donor
+
             return donor_dist
 
         #If acceptor distance is requested
         elif splice_site == "acceptor" and self.acceptor_sam.gtf:
-            acceptor_dist = abs(self.acceptor_sam.acceptor()-self.acceptor_sam.gtf.acceptor)
+            acceptor_dist = 0
+            if not bowtie_style:
+                if self.acceptor_sam.strand == "+":
+                    acceptor_dist = self.acceptor_sam.acceptor()-self.acceptor_sam.gtf.acceptor
+                elif self.acceptor_sam.strand == "-":
+                    acceptor_dist = self.acceptor_sam.gtf.acceptor-self.acceptor_sam.acceptor()
+                else:
+                    sys.stderr.write("SPORK ERROR: in Junction boundary dist, incorrect strand option \n")
+                    sys.exit(1)
+            elif bowtie_style:
+                acceptor_dist = self.acceptor_sam.acceptor()-self.acceptor_sam.gtf.acceptor
+                
             return acceptor_dist
 
         #If a different string was passed in or the specified gtf doesn't exist
         else:
-            return -1
+            sys.stderr.write("SPORK ERROR: in Junction boundary dist, incorrect str or gtf doesn't exist\n")
+            sys.exit(1)
 
     #Return whether or not an donor and acceptor is at a boundary
     def at_boundary(self,splice_site):
@@ -256,7 +294,10 @@ class Junction(object):
             a tuple of Junction where the first entry is self and the
             second is a reverse compliment of self
         """
+        #sys.stdout.write("Before copy in yield_forward_and_reverse\n")
         rev_self = Junction(self.consensus,self.score,self.bin_pair_group,self.jct_ind,self.took_reverse_compliment,self.constants_dict)
+        #rev_self = copy.deepcopy(self)
+        #sys.stdout.write("After copy in yield_forward_and_reverse\n")
         rev_self.took_reverse_compliment = not rev_self.took_reverse_compliment
 
         comp = {"A":"T","a":"t","T":"A","t":"a",
@@ -264,7 +305,7 @@ class Junction(object):
                 "N":"N","n":"n"}
 
         #Take the reverse compliments of the seqs and switch them between donor and acceptor
-        rev_self.consensus = "".join([comp[base] for base in rev_self.consensus])[::-1]
+        rev_self.consensus = "".join([comp[base] for base in self.consensus])[::-1]
         rev_self.donor_sam.seq = "".join([comp[base] for base in self.donor_sam.seq])[::-1]
         rev_self.acceptor_sam.seq = "".join([comp[base] for base in self.acceptor_sam.seq])[::-1]
         rev_self.donor_sam.seq,rev_self.acceptor_sam.seq = rev_self.acceptor_sam.seq,rev_self.donor_sam.seq
@@ -272,14 +313,18 @@ class Junction(object):
         #Flip the strands of both SAMs
         #NOTE only switch the strands if both are + or -, don't do it otherwise
         #Interesting that it works this way, but I drew it out and I'm confident
+        rev_self.donor_sam.strand = self.donor_sam.strand
+        rev_self.acceptor_sam.strand = self.acceptor_sam.strand
         if rev_self.donor_sam.strand == rev_self.acceptor_sam.strand:
             rev_self.donor_sam.strand = "-" if rev_self.donor_sam.strand == "+" else "+"
             rev_self.acceptor_sam.strand = "-" if rev_self.acceptor_sam.strand == "+" else "+"
 
         #Trade starts and stops of donor and acceptor and chromosome
-        rev_self.donor_sam.start,rev_self.acceptor_sam.start = rev_self.acceptor_sam.start,rev_self.donor_sam.start
-        rev_self.donor_sam.stop,rev_self.acceptor_sam.stop = rev_self.acceptor_sam.stop,rev_self.donor_sam.stop
-        rev_self.donor_sam.chromosome,rev_self.acceptor_sam.chromosome = rev_self.acceptor_sam.chromosome,rev_self.donor_sam.chromosome
+        rev_self.donor_sam.start,rev_self.acceptor_sam.start = self.acceptor_sam.start,self.donor_sam.start
+        rev_self.donor_sam.stop,rev_self.acceptor_sam.stop = self.acceptor_sam.stop,self.donor_sam.stop
+        rev_self.donor_sam.chromosome,rev_self.acceptor_sam.chromosome = self.acceptor_sam.chromosome,self.donor_sam.chromosome
+        rev_self.donor_sam.exists = True
+        rev_self.acceptor_sam.exists = True
 
         return self,rev_self
 
