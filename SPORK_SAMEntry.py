@@ -111,6 +111,20 @@ class SAMEntry(object):
         else:
             return str(self.gtf)
 
+    def gene_strand(self):
+        """
+        Goal: return the gtf gene strand associated with this SAMEntry
+        Arguments:
+            none
+
+        Returns:
+            None in string form if no gene, or the gene strand in string form
+        """
+        if self.gtf:
+            return str(self.gtf.strand)
+        else:
+            return str(self.gtf)
+
     def junction(self):
         """
         Goal: get a string of SAMEntry that looks similar to junction fasta headers

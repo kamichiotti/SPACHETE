@@ -15,7 +15,8 @@ require(data.table)
 #for (name in "Ewing"){ #Unfiltered
 #for (name in "CML_UConn"){
 #for (name in c("Engstrom","normal_breast","normal_fetal")){
-for (name in "normal_breast_9_6"){
+#for (name in "normal_breast_9_6"){
+for (name in "normal_fetal_9_8"){
 #for (name in "CML_uconn_9_5_nup214"){
 for (spork in c(0,1)){
 

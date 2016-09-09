@@ -15,7 +15,8 @@ spork_dir_stem = "/scratch/PI/horence/rob/spachete_outputs/"
 #for (name in "CML_new_gtf_test"){ #Filtered
 #for (name in "test_new_pos_fix"){ #Fixed positions
 #for (name in "normal_fetal_8_22"){
-for (name in "CML_uconn_9_5_nup214"){
+for (name in "normal_fetal_9_8"){
+#for (name in "CML_uconn_9_5_nup214"){
 #for (name in "ewing_9_1"){
 #for (name in "rerun_glms"){
 #for (name in "normal_breast_9_6"){

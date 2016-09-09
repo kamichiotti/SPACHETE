@@ -258,7 +258,7 @@ class Junction(object):
             'radius' distance of any exon boundary
         """
         dist = self.boundary_dist(splice_site)
-        if 0 <= dist <= self.constants_dict["at_boundary_cutoff"]:
+        if 0 <= abs(dist) <= self.constants_dict["at_boundary_cutoff"]:
             return True
         else:
             return False
@@ -418,26 +418,28 @@ class Junction(object):
             if it is included, it will be printed out
 
         Returns:
-            a fasta formatted string (with a newline between header and sequence)
+            a description of the junction over multiple lines
         """
         fasta_str = ""
         fasta_str += ">|"+str(self.donor_sam.chromosome)+"|"
-        fasta_str += str(self.donor_sam.str_gene())+"|"
+        fasta_str += str(self.donor_sam.str_gene())+" "
+        fasta_str += str(self.donor_sam.gene_strand())+" strand|"
         fasta_str += str(self.donor_sam.start)+"-"
         fasta_str += str(self.donor_sam.stop)+"|"
         fasta_str += "strand1:"+str(self.donor_sam.strand)+"|"
         fasta_str += "boundary_dist1:"+str(self.boundary_dist("donor"))+"|"
-        fasta_str += "at_boundary1:"+str(self.at_boundary("donor"))+"|_"
+        fasta_str += "at_boundary1:"+str(self.at_boundary("donor"))+"|\n"
 
-        fasta_str += "|"+str(self.acceptor_sam.chromosome)+"|"
-        fasta_str += str(self.acceptor_sam.str_gene())+"|"
+        fasta_str += ">|"+str(self.acceptor_sam.chromosome)+"|"
+        fasta_str += str(self.acceptor_sam.str_gene())+" "
+        fasta_str += str(self.acceptor_sam.gene_strand())+" strand|"
         fasta_str += str(self.acceptor_sam.start)+"-"
         fasta_str += str(self.acceptor_sam.stop)+"|"
         fasta_str += "strand2:"+str(self.acceptor_sam.strand)+"|"
         fasta_str += "boundary_dist2:"+str(self.boundary_dist("acceptor"))+"|"
-        fasta_str += "at_boundary2:"+str(self.at_boundary("acceptor"))+"|_"
+        fasta_str += "at_boundary2:"+str(self.at_boundary("acceptor"))+"|\n"
 
-        fasta_str += "|splice:"+str(self.splice_ind())+"|"
+        fasta_str += ">|splice:"+str(self.splice_ind())+"|"
         fasta_str += "score:"+str(self.score)+"|"
         fasta_str += "fusion:"+str(self.get_fusion_type())+"|"
         fasta_str += "num:"+str(len(self.bin_pair_group))+"|"

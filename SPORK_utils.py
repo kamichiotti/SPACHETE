@@ -523,16 +523,27 @@ def get_jct_gtf_info(junctions,gtfs,constants_dict):
         else:
             chrom_gtfs[gtf.chromosome].append(gtf)
 
-    # Pre sort the gtfs into a donor and acceptor oriented list by chromosome
+    # Pre sort the gtfs into a donor and acceptor oriented list by chromosome and strand
     chrom_gtfs_don = {}
     chrom_gtfs_acc = {}
     chrom_don_libs = {}
     chrom_acc_libs = {}
     for chrom in chrom_gtfs:
-        chrom_gtfs_don[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.donor)
-        chrom_gtfs_acc[chrom] = sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.acceptor)
-        chrom_don_libs[chrom] = [gtf.donor for gtf in chrom_gtfs_don[chrom]]
-        chrom_acc_libs[chrom] = [gtf.acceptor for gtf in chrom_gtfs_acc[chrom]]
+        chrom_gtfs_don[chrom+"+"] = []
+        chrom_gtfs_don[chrom+"-"] = []
+        chrom_don_libs[chrom+"+"] = []
+        chrom_don_libs[chrom+"-"] = []
+        for don_gtf in sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.donor):
+            chrom_gtfs_don[chrom+don_gtf.strand].append(don_gtf)
+            chrom_don_libs[chrom+don_gtf.strand].append(don_gtf.donor)
+
+        chrom_gtfs_acc[chrom+"+"] = []
+        chrom_gtfs_acc[chrom+"-"] = []
+        chrom_acc_libs[chrom+"+"] = []
+        chrom_acc_libs[chrom+"-"] = []
+        for acc_gtf in sorted(chrom_gtfs[chrom],key=lambda gtf: gtf.acceptor):
+            chrom_gtfs_acc[chrom+acc_gtf.strand].append(acc_gtf)
+            chrom_acc_libs[chrom+acc_gtf.strand].append(acc_gtf.acceptor)
 
     # Find the closest gtfs to donor and acceptor
     for junction in junctions:
@@ -571,9 +582,10 @@ def find_closest_gtf(jct,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_
     if jct.donor_sam.exists:
         query = jct.donor_sam.donor()
         chrom = jct.donor_sam.chromosome
-        if chrom in chrom_gtfs_don and chrom in chrom_don_libs:
-            gtfs_don = chrom_gtfs_don[chrom]
-            don_lib = chrom_don_libs[chrom]
+        chrom_key = chrom+jct.donor_sam.strand
+        if chrom_key in chrom_gtfs_don and chrom_key in chrom_don_libs:
+            gtfs_don = chrom_gtfs_don[chrom_key]
+            don_lib = chrom_don_libs[chrom_key]
             closest_don_ind,its = bin_search_gtf(query,don_lib)
             closest_results["donor"] = gtfs_don[closest_don_ind]
 
@@ -581,9 +593,10 @@ def find_closest_gtf(jct,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_
     if jct.acceptor_sam.exists:
         query = jct.acceptor_sam.acceptor()
         chrom = jct.acceptor_sam.chromosome
-        if chrom in chrom_gtfs_acc and chrom in chrom_acc_libs:
-            gtfs_acc = chrom_gtfs_acc[chrom]
-            acc_lib = chrom_acc_libs[chrom]
+        chrom_key = chrom+jct.acceptor_sam.strand
+        if chrom_key in chrom_gtfs_acc and chrom_key in chrom_acc_libs:
+            gtfs_acc = chrom_gtfs_acc[chrom_key]
+            acc_lib = chrom_acc_libs[chrom_key]
             closest_acc_ind,its = bin_search_gtf(query,acc_lib)
             closest_results["acceptor"] = gtfs_acc[closest_acc_ind]
 

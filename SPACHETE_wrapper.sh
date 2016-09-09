@@ -33,10 +33,9 @@
 #############################
 #    CML UConn samples      #
 #############################
-KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_uconn_9_5_nup214/"
-#STEM_INCLUDE_ONLY_LIST=("SRR3192410" "SRR3192411" "SRR3192412")
-STEM_INCLUDE_ONLY_LIST=("SRR3192409")
+#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_uconn_9_5_nup214/"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192422")
 
 #############################
 #     CML test samples      #
@@ -60,11 +59,12 @@ STEM_INCLUDE_ONLY_LIST=("SRR3192409")
 ################################
 #    Normal fetal samples      #
 ################################
-#KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_8_31"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_new_gtf_test_try/"
+KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_9_8"
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"   "Fetal_Heart_401_AGTCAA_L005"      "Fetal_Kidney_403b_TGACCA_L004"    "Fetal_Lung_395_AGTTCC_L007")
-#STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_403b_GTCCGC_L008"  "Fetal_Heart_405_CAGATC_L007"      "Fetal_Liver_364_ATTCCT_L007_001"  "Fetal_Lung_397_ATGTCA_L008")
+#STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"   "Fetal_Heart_401_AGTCAA_L005"                                          "Fetal_Lung_395_AGTTCC_L007")
+#<---------- Completed up to here --------->#
+STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_403b_GTCCGC_L008"  "Fetal_Heart_405_CAGATC_L007"      "Fetal_Liver_364_ATTCCT_L007_001"  "Fetal_Lung_397_ATGTCA_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_405_GTGAAA_L008"   "Fetal_Intestine_360_AGTTCC_L005"  "Fetal_Liver_364_ATTCCT_L007_002"  "Fetal_Lung_408_CCGTCC_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_408_CGATGT_L008"   "Fetal_Intestine_361_ATGTCA_L005"  "Fetal_Liver_364_ATTCCT_L007_003"  "Fetal_Stomach_360_ACAGTG_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_419_TGACCA_L008"   "Fetal_Intestine_392_GTGAAA_L005"  "Fetal_Liver_364_ATTCCT_L007_004"  "Fetal_Stomach_361_GCCAAT_L008")
@@ -74,10 +74,6 @@ STEM_INCLUDE_ONLY_LIST=("SRR3192409")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_388_GCCAAT_L006"     "Fetal_Intestine_429_CCGTCC_L003"  "Fetal_Lung_361_CAGATC_L005"       "Fetal_Stomach_405_ATGTCA_L006")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_397_CAGATC_L004"     "Fetal_Kidney_360_CGATGT_L007"     "Fetal_Lung_384_CTTGTA_L007"       "Fetal_Stomach_408_GTGAAA_L006")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_399_CTTGTA_L004"     "Fetal_Kidney_397_ACAGTG_L005"     "Fetal_Lung_388_AGTCAA_L007")
-#<---------- Completed up to here --------->#
-#The following job failed because there were no junctions at all reported back and MACHETE broke
-#I'm not sure why this is occuring, I think it may be related to read-length issues
-#STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_397_CAGATC_L004")
 
 ################################
 #        Bladder samples       #
