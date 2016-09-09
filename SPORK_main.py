@@ -277,8 +277,8 @@ for file_name in file_names:
         write_time("Time to make split unaligned read files "+R_file_name,start_split_reads,timer_file_path)
         sys.stdout.write("SPORK: made ["+str(read_num)+"] split unaligned reads\n")
         if read_num == 0:
-            sys.stdout.write("SPORK: no reads long enough to split, exiting immediately")
-            sys.stderr.write("SPORK: no reads long enough to split, exiting immediately")
+            sys.stdout.write("SPORK: no reads long enough to split, exiting immediately\n")
+            sys.stderr.write("SPORK: no reads long enough to split, exiting immediately\n")
             sys.exit(0)
     constants_dict["read_num_to_read_id"] = read_num_to_read_id
 
@@ -441,10 +441,8 @@ for file_name in file_names:
                 sys.stdout.write(reverse_jct.log_string())
 
             if forward_dist < reverse_dist:
-                sys.stdout.write("Using forward jct\n")
                 gtf_denovo_junctions.append(forward_jct)
             else:
-                sys.stdout.write("Using reverse jct\n")
                 gtf_denovo_junctions.append(reverse_jct)
 
         denovo_junctions = gtf_denovo_junctions

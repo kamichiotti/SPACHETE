@@ -168,7 +168,7 @@ with open(FullStemFile,"r") as stem_file:
             sub_SLURM.write("#!/bin/bash\n")
             sub_SLURM.write("python "+os.path.join(MACHETE,"spachete_run.py")+OPTIONS+"\n")
 
-        subprocess.call(["sbatch","-p","owners","--mem=40000","--time=3:00:00",
+        subprocess.call(["sbatch","-p","horence","--mem=100000","--time=24:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
         """

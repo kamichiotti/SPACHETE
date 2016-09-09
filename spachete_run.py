@@ -344,7 +344,7 @@ write_time("FarJuncNaiveReport inds",start_time,timer_file_path)
 #
 
 # Added July 5 2016
-# ASSUMES THERE IS ONLY ONE PAIR OF FASTQ FILES!
+# ASSUMES THERE IS ONLY ONE PAIR OF FASTQ FILES! (ok for spachete_feeder)
 start_time = time.time()
 i=1
 stdout = open(os.path.join(LOG_DIR,str(i) + "assumingonefile_out_getStem.txt"),"w")

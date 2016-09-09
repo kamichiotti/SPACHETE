@@ -33,9 +33,9 @@
 #############################
 #    CML UConn samples      #
 #############################
-#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_uconn_9_5_nup214/"
-#STEM_INCLUDE_ONLY_LIST=("SRR3192422")
+KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/CML_uconn_9_5_nup214/"
+STEM_INCLUDE_ONLY_LIST=("SRR3192422")
 
 #############################
 #     CML test samples      #
@@ -47,27 +47,26 @@
 #    Normal breast samples      #
 #################################
 #KNIFE_DIR="/scratch/PI/horence/gillian/normal_breast/circpipe"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_9_6"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_breast_9_9"
 #STEM_INCLUDE_ONLY_LIST=("SRR1027188")
 
 ######################################
 #    Simulated engstrom samples      #
 ###############################3######
 #KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
-#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/gillian/engstrom"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/engstrom_9_9"
 
 ################################
 #    Normal fetal samples      #
 ################################
-KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
-OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_9_8"
+#KNIFE_DIR="/scratch/PI/horence/gillian/normal_fetal/circpipe_fetal"
+#OUT_DIR="/scratch/PI/horence/rob/spachete_outputs/normal_fetal_9_8"
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"   "Fetal_Heart_401_AGTCAA_L005"      "Fetal_Kidney_403b_TGACCA_L004"    "Fetal_Lung_395_AGTTCC_L007")
-#STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_360_CTTGTA_L006"   "Fetal_Heart_401_AGTCAA_L005"                                          "Fetal_Lung_395_AGTTCC_L007")
-#<---------- Completed up to here --------->#
-STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_403b_GTCCGC_L008"  "Fetal_Heart_405_CAGATC_L007"      "Fetal_Liver_364_ATTCCT_L007_001"  "Fetal_Lung_397_ATGTCA_L008")
+#STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_403b_GTCCGC_L008"  "Fetal_Heart_405_CAGATC_L007"      "Fetal_Liver_364_ATTCCT_L007_001"  "Fetal_Lung_397_ATGTCA_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_405_GTGAAA_L008"   "Fetal_Intestine_360_AGTTCC_L005"  "Fetal_Liver_364_ATTCCT_L007_002"  "Fetal_Lung_408_CCGTCC_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_408_CGATGT_L008"   "Fetal_Intestine_361_ATGTCA_L005"  "Fetal_Liver_364_ATTCCT_L007_003"  "Fetal_Stomach_360_ACAGTG_L008")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Adrenal_419_TGACCA_L008"   "Fetal_Intestine_392_GTGAAA_L005"  "Fetal_Liver_364_ATTCCT_L007_004"  "Fetal_Stomach_361_GCCAAT_L008")
+#<---------- Completed up to here --------->#
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Brain_408_AGTCAA_L006"     "Fetal_Intestine_395_CGATGT_L005"  "Fetal_Liver_364_ATTCCT_L007_005"  "Fetal_Stomach_397_CCGTCC_L007")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_361_TGACCA_L007"     "Fetal_Intestine_397_TGACCA_L005"  "Fetal_Liver_364_ATTCCT_L007_006"  "Fetal_Stomach_401_GTCCGC_L006")
 #STEM_INCLUDE_ONLY_LIST=("Fetal_Heart_365_ACAGTG_L007"     "Fetal_Intestine_408_ACAGTG_L006"  "Fetal_Liver_364_ATTCCT_L007_007"  "Fetal_Stomach_403b_AGTTCC_L006")
