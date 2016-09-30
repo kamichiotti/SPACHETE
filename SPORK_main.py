@@ -82,14 +82,15 @@ if not mode:
 bin_size = 50                           #size of bins in bps to split ref into
 group_member_cutoff = 2                 #minimum number of reads that need to map to a bin pair
 consensus_score_cutoff = 0.5            #relates to the number of mismatches in consensus
-span_cutoff = 1e6                       #minimum span distance to be classified a "fusion"
-at_boundary_cutoff = 15                 #maximum distance to be away from a boundary for fusion classification
+span_cutoff = 1e5                       #minimum span distance to be classified a "fusion"
+at_boundary_cutoff = 2                  #maximum distance to be away from a boundary for fusion classification
 collapse_thresh = 5                     #distance used in the collapse junctions step
 min_bases_per_col = 2                   #only consider column if it has at least n bases
 read_gap_score = "--rdg 50,50"          #read gap set to be very high to not allow gaps
 ref_gap_score = "--rfg 50,50"           #read gap set to be very high to not allow gaps
 min_score = "--score-min L,0,-0.10"     #minimum allowed Bowtie2 score
 allowed_mappings = "1"                  #allowed mappings of a given read. Currently not implemented
+fusion_max_gap = 0                      #size of splice site gap to allow for fusions
 
 thirds_len = 36                         #length to cut the original reads into for the 5' and 3' pieces:
                                         #   |-------|---------------|-------|
@@ -158,7 +159,7 @@ constants_dict = {"input_dir":input_dir,"mode":mode,"splice_flank_len":splice_fl
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
                   "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,"use_prior":use_prior,
                   "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf_path":gtf_path,"collapse_thresh":collapse_thresh,
-                  "at_boundary_cutoff":at_boundary_cutoff,"span_cutoff":span_cutoff}
+                  "at_boundary_cutoff":at_boundary_cutoff,"span_cutoff":span_cutoff,"fusion_max_gap":fusion_max_gap}
 
 ###################################
 # Loop through each R1 input file #

@@ -397,11 +397,9 @@ def find_splice_inds(denovo_junctions,constants_dict):
     #the smaller donor site since this will help collapsing in the next step
     #(could have chosen larger donor etc, just to flip them all same way)
     
-    write_time("# Jcts w/ splice = "+str(len(jcts_with_splice)),time.time(),timer_file_path)
-    write_time("# Jcts w/out splice = "+str(len(jcts_without_splice)),time.time(),timer_file_path)
+    write_time("Num Jcts w/ splice = "+str(len(jcts_with_splice)),time.time(),timer_file_path)
+    write_time("Num Jcts w/out splice = "+str(len(jcts_without_splice)),time.time(),timer_file_path)
 
-    #This takes a long time to run which I guess makes sense since its doing a deep copy which
-    #is not really necessary. I could improve this
     small_don_jcts_with_splice = []
     for jct in jcts_with_splice:
         if jct.donor_sam.donor() < jct.acceptor_sam.acceptor():
@@ -678,14 +676,9 @@ def identify_fusions(junctions,constants_dict):
     span_cutoff = constants_dict["span_cutoff"]
     fusion_jcts = []
     for jct in junctions:
-        if jct.at_boundary("donor") and jct.at_boundary("acceptor"):
-            if jct.donor_sam.chromosome != jct.acceptor_sam.chromosome:
-                fusion_jcts.append(jct)
-            elif jct.donor_sam.strand != jct.acceptor_sam.strand:
-                fusion_jcts.append(jct)
-            elif jct.span() > span_cutoff:
-                fusion_jcts.append(jct)
-    
+        fusion_type = jct.get_fusion_type()
+        if "fusion" in fusion_type and "no_fusion" not in fusion_type:
+            fusion_jcts.append(jct)
     return fusion_jcts
 
 

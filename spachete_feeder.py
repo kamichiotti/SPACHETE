@@ -67,6 +67,7 @@ else:
 include_stems = args.STEM_INCLUDE_LIST
 if include_stems:
     include_stems = include_stems.split(",")
+    print "Stem list is: ",str(include_stems)
 
 
 ##########################################################
@@ -79,12 +80,14 @@ with open(FullStemFile,"r") as stem_file:
     stems = stem_file.readlines()
     for stem in sorted(stems):
         stem = stem.strip()
-        print stem
+        
         #If include_stems is not None then
         #skip all the stems not in the include stems list
         if include_stems and stem not in include_stems:
             print stem+" not in include stems, skipping "+stem
             continue
+        elif include_stems:
+            print "Found",stem,"in include stems, running",stem
 
         OUTPUT_DIR = args.OUTPUT_DIR
         OUTPUT_DIR = os.path.join(OUTPUT_DIR,stem)
@@ -159,7 +162,7 @@ with open(FullStemFile,"r") as stem_file:
 
         """
         #Sending jobs to the SLURM scheduler (comment out if not on SLURM)
-        job_name = stem[-5:] #annoying that the full job name doesn't show
+        job_name = stem[-4:] #annoying that the full job name doesn't show
         slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
         slurm_err_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".err")
 
@@ -168,7 +171,7 @@ with open(FullStemFile,"r") as stem_file:
             sub_SLURM.write("#!/bin/bash\n")
             sub_SLURM.write("python "+os.path.join(MACHETE,"spachete_run.py")+OPTIONS+"\n")
 
-        subprocess.call(["sbatch","-p","horence","--mem=100000","--time=24:00:00",
+        subprocess.call(["sbatch","-p","horence","--mem=64000","--time=48:00:00",
                          "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                          stdout=machete_out,stderr=machete_err)
         """

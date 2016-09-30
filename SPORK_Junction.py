@@ -176,11 +176,11 @@ class Junction(object):
             
         #Should this be considered a fusion?
         fusion = "no_fusion"
+
         if anonat == "both":
-            if chroms != "local-intrachrom":
-                fusion = "fusion"
-            elif strand == "inversion":
-                fusion = "fusion"
+            if self.splice_gap() != None and abs(self.splice_gap()) <= self.constants_dict["fusion_max_gap"]:
+                if chroms != "local-intrachrom":
+                    fusion = "fusion"
 
         #Concatenate them into one string
         fusion_type = fusion+"-"+anonat+"_"+chroms+"_"+strand+"_"+revreg
@@ -258,7 +258,7 @@ class Junction(object):
             'radius' distance of any exon boundary
         """
         dist = self.boundary_dist(splice_site)
-        if 0 <= abs(dist) <= self.constants_dict["at_boundary_cutoff"]:
+        if abs(dist) <= self.constants_dict["at_boundary_cutoff"]:
             return True
         else:
             return False
