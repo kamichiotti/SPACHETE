@@ -1,6 +1,7 @@
 # General Imports
 import subprocess
 import itertools
+import zlib
 import time
 import sys
 import os
@@ -41,6 +42,10 @@ def get_reference_and_gtf_from_mode(ref_dir,abs_path,mode="hg19"):
     if mode == "hg19":
         gtf_path = os.path.join(abs_path,"gtfs","hg19_gtfs")
         reference = os.path.join(reference,"hg19_genome")
+
+    elif mode == "mm10":
+        gtf_path = os.path.join(abs_path,"gtfs","mm10_gtfs")
+        reference = os.path.join(reference,"mm10_genome")
 
     return reference,gtf_path
 
@@ -181,7 +186,7 @@ def build_junction_sequences(bin_pairs,bin_pair_group_ranges,full_path_name,cons
             took_reverse_compliment = True
 
         """
-        # If the bin score is high enough then add it
+        # If the bin score is good enough then add it
         if bin_score < consensus_score_cutoff:
             denovo_junction = Junction(bin_consensus,bin_score,group_members,jct_ind,took_reverse_compliment,constants_dict)
             denovo_junctions.append(denovo_junction)
@@ -332,15 +337,33 @@ def find_splice_inds(denovo_junctions,constants_dict):
 
         # Niether the 5' nor 3' sam is at the prev_jct_ind
         else:
-            prev_consensus = denovo_junctions[prev_jct_ind].consensus
+            #RB 11/18/16 Filter out 5' and 3' sams if chroms are not the same as the unsplit
+            #RB 11/21/16 Also imposing a radius on the same chromosome filter (start at 30, very tight)
+            radius = 30
+            pj = denovo_junctions[prev_jct_ind]
+            sam_five_list = [sam for sam in sam_five_list
+                             if (sam.chromosome == pj.donor_sam.chromosome and 
+                                 abs(pj.donor_sam.start-sam.start) < radius)]
+
+            sam_three_list = [sam for sam in sam_three_list
+                              if (sam.chromosome == pj.acceptor_sam.chromosome and 
+                                  abs(pj.acceptor_sam.start-sam.start) < radius)]
+            
+            # Get the best 5' and 3' pair of Sams
+            prev_consensus = pj.consensus
             best_five,best_three = get_best_splice(sam_five_list,sam_three_list,prev_consensus,max_mismatches)
+
             best_splices[prev_jct_ind] = [best_five,best_three]
             sam_five_list = []
             sam_three_list = []
             prev_jct_ind = min(five_jct_ind,three_jct_ind)
 
     # Have to push the last jct lists into the shared_dict
-    prev_consensus = denovo_junctions[prev_jct_ind].consensus
+    pj = denovo_junctions[prev_jct_ind]
+    prev_consensus = pj.consensus
+    sam_five_list = [sam for sam in sam_five_list if sam.chromosome == pj.donor_sam.chromosome]
+    sam_three_list = [sam for sam in sam_three_list if sam.chromosome == pj.acceptor_sam.chromosome]
+ 
     best_five,best_three = get_best_splice(sam_five_list,sam_three_list,prev_consensus,max_mismatches)
     best_splices[prev_jct_ind] = [best_five,best_three]
     
@@ -471,6 +494,106 @@ def get_best_splice(sam_five_list,sam_three_list,consensus,max_mismatches):
     # NOTE is it possible that the best 5' and 3' seqs have overlap in the middle?
     else:
         return best_sam_five,best_sam_three
+
+
+##########################
+#   Filter Map Quality   #
+##########################
+#Function to take in Junctions after Splice Ind finding and map pieces right around ind
+#to filter out degenerate or multiple mapping pieces. Currently uses a hard threshold
+def filter_map_quality(jcts, constants_dict):
+    """
+    Goal: Map left and right 25-mers of splice ind and filter out jcts by mapping score
+    Arguments:
+        jcts is a list of type Junction
+        constants dict has all the constants used in the program
+
+    Returns:
+        (pass_jcts,fail_jcts, anom_jcts) is a tuple of 
+            (1) list of type Junction of jcts that passed
+            (2) list of type Junction of jcts that failed
+            (3) list of type Junction of jcts that had some other error
+    """
+
+    #Add map qualities and only keep those above the cutoff
+    mq_cutoff = constants_dict["mq_cutoff"]
+    mq_len = constants_dict["mq_len"]
+
+    #mqmallg=unique(mallg[(!is.na(match( paste(mallg$junction),paste(mq[mq3+mq5>lower.mq]$junction))))])
+    
+    #Write out temp fasta for Bowtie2 calls
+    temp_fasta_name = os.path.join(constants_dict["output_dir"],"mapq_temp.fasta")
+    with open(temp_fasta_name,"w") as temp_fasta:
+        for ind,jct in enumerate(jcts):
+            seq = jct.consensus
+            don_seq = seq[:jct.splice_ind()][-mq_len:] #Get the last mq_len bases before splice
+            acc_seq = seq[jct.splice_ind():][:mq_len]  #Get the first mq_len bases after splice
+            temp_fasta.write(">jct_"+str(ind)+"_don"+"\n"+don_seq+"\n")
+            temp_fasta.write(">jct_"+str(ind)+"_acc"+"\n"+acc_seq+"\n")
+
+    #Get bowtie2 parameter constants
+    min_score = constants_dict["splice_finding_min_score"]
+    read_gap_score = constants_dict["read_gap_score"]
+    ref_gap_score = constants_dict["ref_gap_score"]
+    num_threads = constants_dict["num_threads"]
+    reference = constants_dict["reference"]
+    use_prior = constants_dict["use_prior"]
+    timer_file_path = constants_dict["timer_file_path"]
+    mq_mapped_name = os.path.join(constants_dict["output_dir"],"mapq_mapped.sam")
+
+    #Call bowtie2 to get map qualities
+    with open(mq_mapped_name,"w") as mq_mapped:
+        subprocess.call(
+           ["bowtie2", "-f", "--no-sq", "--no-unal", min_score, read_gap_score, ref_gap_score, "-p", num_threads,
+            "-x", reference, temp_fasta_name], stdout=mq_mapped)
+
+
+    #Go through the mapped output file
+    pass_jcts = []
+    fail_jcts = []
+    anom_jcts = []
+    with open(mq_mapped_name,"r") as mq_mapped:
+        sam_line = mq_mapped.readline()
+
+        while sam_line:
+            #Skip header lines
+            if "@" in sam_line:
+                sam_line = mq_mapped.readline()
+                continue
+
+            #Get sam entry 1
+            sam_entry_1 = SAMEntry(sam_line)
+            x,jct_ind_1,don = sam_entry_1.read_id.split("_")
+            jct_ind_1 = int(jct_ind_1)
+
+            #Get sam entry 2
+            sam_line = mq_mapped.readline()
+            sam_entry_2 = SAMEntry(sam_line)
+            if not sam_line:
+                anom_jcts.append(jcts[jct_ind_1])
+                continue
+            x,jct_ind_2,acc = sam_entry_2.read_id.split("_")
+            jct_ind_2 = int(jct_ind_2)
+
+            #Check for different anomalous cases where a don/acc doesn't appear in output
+            #If any anomally is hit we start w/ sam_entry_2 next loop, don't advance
+            if don != "don" or acc != "acc" or jct_ind_1 != jct_ind_2:
+                anom_jcts.append(jcts[jct_ind_1])
+                continue
+
+            #Otherwise if they are don/acc from the same jct check if they passed mq_cutoff
+            jct_mapq = sam_entry_1.mapping_quality + sam_entry_2.mapping_quality
+            jcts[jct_ind_1].mapq = jct_mapq
+            if jct_mapq > mq_cutoff:
+                pass_jcts.append(jcts[jct_ind_1])
+            else:
+                fail_jcts.append(jcts[jct_ind_1])
+
+            #Move on to the next line
+            sam_line = mq_mapped.readline()
+
+    #Return the passed, failed, and anomalous jcts
+    return (pass_jcts, fail_jcts, anom_jcts)
 
 
 #####################
@@ -1025,4 +1148,22 @@ def follow_nup214(forward_jct,reverse_jct):
         sys.stdout.flush()
 
 
+###################################
+#   Track NUP214 as a test case   #
+###################################
+def get_seq_complexity(seq):
+    """
+    Goal: take in a string and return the sequence complexity. Makes use of zlib to compress
+          the string and see how much compression occurred. If lots of compression, then seq was low complexity
+
+    Arguments:
+        seq is a sequence (or really any string)
+    
+    Return:
+        a float for the string complexity between 0 and 1 (0 is least complex, 1 is most)
+    """
+    uncompressed = sys.getsizeof(seq)
+    compressed = sys.getsizeof(zlib.compress(seq))
+    compression = float(compressed)/uncompressed #0 is worst, 1 is best (visually making 0.675 cutoff)
+    return compression
 

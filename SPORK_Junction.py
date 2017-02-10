@@ -8,7 +8,7 @@ import sys
 #Junction class
 class Junction(object):
     __slots__ = ["consensus","score","bin_pair","bin_pair_group","took_reverse_compliment","constants_dict",
-                 "donor_sam","acceptor_sam","jct_ind"]
+                 "donor_sam","acceptor_sam","mapq","jct_ind"]
 
     def __init__(self,consensus,score,bin_pair_group,jct_ind,took_reverse_compliment,constants_dict):
         """
@@ -30,12 +30,24 @@ class Junction(object):
         self.jct_ind = jct_ind
         self.took_reverse_compliment = took_reverse_compliment
         self.constants_dict = constants_dict
+        self.mapq = 0
 
         #Find chromosome, bin_pair and strand info from the first mapped read
         rep_bin_pair = self.bin_pair_group[0]
         self.bin_pair = rep_bin_pair.bin_pair
         self.donor_sam = SAMEntry()
         self.acceptor_sam = SAMEntry()
+
+        #Get some information for the donor sam from the five_prime sam of the bin pair
+        self.donor_sam.chromosome = rep_bin_pair.five_prime_chr
+        self.donor_sam.start = rep_bin_pair.five_prime_SAM.start
+        self.donor_sam.stop = rep_bin_pair.five_prime_SAM.stop
+
+        #Get some information for the acceptor sam from the three_prime sam of the bin pair
+        self.acceptor_sam.chromosome = rep_bin_pair.three_prime_chr
+        self.acceptor_sam.start = rep_bin_pair.three_prime_SAM.start
+        self.acceptor_sam.stop = rep_bin_pair.three_prime_SAM.stop
+
 
 
     #Use the sam's to find the splice index in reference to the concensus
@@ -398,6 +410,7 @@ class Junction(object):
         fasta_str += ",gap="+str(self.splice_gap())
         fasta_str += ",don-dist:"+str(self.boundary_dist("donor"))
         fasta_str += ",acc-dist:"+str(self.boundary_dist("acceptor"))
+        fasta_str += ",mapq="+str(self.mapq)
         fasta_str += ",jct_ind="+str(self.jct_ind)
         fasta_str += "\n"
 
@@ -444,6 +457,7 @@ class Junction(object):
         fasta_str += "fusion:"+str(self.get_fusion_type())+"|"
         fasta_str += "num:"+str(len(self.bin_pair_group))+"|"
         fasta_str += "splice:"+str(self.splice_type())+"|"
+        fasta_str += "mapq="+str(self.mapq)+"|"
         fasta_str += "jct_ind:"+str(self.jct_ind)+"|\n"
 
         splice_flank_len = int(self.constants_dict["splice_flank_len"])

@@ -16,7 +16,9 @@ import os
 
 #MACHETE = os.path.dirname(__file__)
 MACHETE = os.path.dirname(os.path.abspath(__file__))
-print "path:",MACHETE
+sys.stdout.write("path:"+MACHETE+'\n')
+sys.stdout.flush()
+
 # goal is to create distant paired ends using my paired end finder
 # then use output to generate far junction library
 # then use output to align to bowtie
@@ -58,9 +60,9 @@ description = "Required args: --circpipe-dir, --output-dir, --hg19Exons, --reg-i
 
 parser = ArgumentParser(description=description)
 parser.add_argument("--circpipe-dir",required=True,dest="CIRCPIPE_DIR",help="Dir containing circ pipe output (incl linda's directories orig, circReads, logs, sample stats)")
+parser.add_argument("--mode",required=True,dest="MODE",help="How to run SPACHETE/MACHETE for human --> 'hg19', for mouse --> 'mm10'")
 parser.add_argument("--output-dir",required=True,dest="OUTPUT_DIR",help="Output directory for resuts. Directory path will be created recursively if it doesn't already exist. If it exists already, the directory will be deleted then created again.")
 parser.add_argument("--user-bp-dist",dest="USERBPDIST",type=int,default=1000,help="Default is %(default)s.")
-#parser.add_argument("REFGENOME",help="HG19 vs HG38;could upgrade to HG38.")
 parser.add_argument("--num-junc-bases",dest="NUMBASESAROUNDJUNC",type=int,default=8,help="Default for linda's is 8 for read lengths < 70 and 13 for read lengths > 70.")
 parser.add_argument("--numIndels",dest="NumIndels",type=int,default=5,help="Default is %(default)s.")
 parser.add_argument("--hg19Exons",required=True,dest="EXONS",help="Path to HG19Exons. Formerly called PICKLEDIR.")
@@ -70,15 +72,13 @@ parser.add_argument("--circref-dir",required=True,dest="CIRCREF",help="Path to r
 args = parser.parse_args()
 
 CIRCPIPE_DIR = args.CIRCPIPE_DIR
+MODE = args.MODE
 OUTPUT_DIR = args.OUTPUT_DIR
-print OUTPUT_DIR
+sys.stdout.write(OUTPUT_DIR+"\n")
 if not os.path.isdir(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
-#else:
-#   shutil.rmtree(OUTPUT_DIR)
-#   os.makedirs(OUTPUT_DIR)
+
 USERBPDIST = args.USERBPDIST
-REFGENOME = "HG19" #args.REFGENOME
 NUMBASESAROUNDJUNC = args.NUMBASESAROUNDJUNC
 NumIndels = args.NumIndels
 EXONS = args.EXONS
@@ -244,6 +244,7 @@ spork_process = subprocess.Popen(["python",os.path.join(MACHETE,"SPORK_main.py")
                                     "--input-dir",CIRCPIPE_DIR,
                                     "--output-dir",OUTPUT_DIR,
                                     "--ref-dir",CIRCREF,
+                                    "--mode",MODE,
                                     "--stem-name",SPORK_STEM_NAME],
                                     stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 spork_out,spork_err = spork_process.communicate()
@@ -422,11 +423,25 @@ write_time("AlignUnalignedtoFJ fasta inds",start_time,timer_file_path)
 
 
 ## If there is homology between a FarJunctions fasta sequence and the genome or transcriptome or a linear junction or circular junction, then the fusion read is less likely.  Alignments of the FarJunctions fasta sequences to the KNIFE reference indices, genome, transcriptome, linear junctions (reg), and scrambled junctions (junc) are created with two different bowtie parameters.  Bad juncs will align to genome/transcriptome/junc/reg but good juncs will not align. These are just aligning the FJ Fasta to the bad juncs with various alignment parameters. Any junctions aligning to here will eventually be tagged as "BadFJ=1" in the final reports whereas if junctions don't align, they will receive a "BadFJ=0" in the final reports.
+#RB 12/5/16: Added the if elif for MODE type
+genomeIndex = ""
+transcriptomeIndex = ""
+regIndex = ""
+juncIndex = ""
 
-genomeIndex = os.path.join(CIRCREF,"hg19_genome")
-transcriptomeIndex = os.path.join(CIRCREF,"hg19_transcriptome")
-regIndex = os.path.join(CIRCREF,"hg19_junctions_reg")
-juncIndex = os.path.join(CIRCREF,"hg19_junctions_scrambled")
+if MODE.lower() == "hg19":
+    genomeIndex = os.path.join(CIRCREF,"hg19_genome")
+    transcriptomeIndex = os.path.join(CIRCREF,"hg19_transcriptome")
+    regIndex = os.path.join(CIRCREF,"hg19_junctions_reg")
+    juncIndex = os.path.join(CIRCREF,"hg19_junctions_scrambled")
+
+elif MODE.lower() == "mm10":
+    genomeIndex = os.path.join(CIRCREF,"mm10_genome")
+    transcriptomeIndex = os.path.join(CIRCREF,"mm10_transcriptome")
+    regIndex = os.path.join(CIRCREF,"mm10_junctions_reg")
+    juncIndex = os.path.join(CIRCREF,"mm10_junctions_scrambled")
+
+   
 
 # for BadFJ we Align FarJunc fasta file to the above indices with the following bowtie parameters:
 # A minimum alignment score corresponding to 4 mismatches per 100 base pairs, no N ceiling, and a prohibitive read gap penalty that disallows any read gaps in the fasta sequence or the reference index.  Alignments are found in <FJDir>/BadFJ/<STEM>/<STEM>_BadFJto<ReferenceIndex>.sam.
@@ -561,11 +576,12 @@ for i in range(1,NUM_FILES + 1):
 
 
     ## Read gaps are disallowed in the first version of BadJuncs.  A second version of BadJuncs was created to also find genome/reg/junc/transcriptome alignments with gapped alignments.
-## For BadFJ ver2 we use bowtie to align the reads1 and 2 as if they were paired end reads from the same strand.  We impose a minimum gap of 0 between the two and a maximum gap of 50,000 bases to allow up to a 50,000 base gapped alignment.
-    genomeBOWTIEPARAM = "--no-unal --no-mixed --no-sq -p 8 -I 0 -X 50000 -f --ff -x {genomeIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtoGenome.sam".format(genomeIndex=genomeIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
-    transcriptomeBOWTIEPARAM = "--no-unal --no-mixed  --no-sq -p 8 -I 0 -X 50000 -f --ff -x {transcriptomeIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtotranscriptome.sam".format(transcriptomeIndex=transcriptomeIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
-    regBOWTIEPARAM = "--no-unal --no-mixed --no-sq -p 8 -I 0 -X 50000 -f --ff -x {regIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtoReg.sam".format(regIndex=regIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
-    juncBOWTIEPARAM ="--no-unal --no-mixed --no-sq -p 8 -I 0 -X 50000 -f --ff -x {juncIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtoJunc.sam".format(juncIndex=juncIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
+    ## For BadFJ ver2 we use bowtie to align the reads1 and 2 as if they were paired end reads from the same strand.  We impose a minimum gap of 0 between the two and a maximum gap of 50,000 bases to allow up to a 50,000 base gapped alignment.
+    badfj2_thresh = 500000 #RB 11/18/16: Updated this from 50,000 to 500,000
+    genomeBOWTIEPARAM = "--no-unal --no-mixed --no-sq -p 8 -I 0 -X {badfj2_thresh} -f --ff -x {genomeIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtoGenome.sam".format(badfj2_thresh=badfj2_thresh,genomeIndex=genomeIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
+    transcriptomeBOWTIEPARAM = "--no-unal --no-mixed  --no-sq -p 8 -I 0 -X {badfj2_thresh} -f --ff -x {transcriptomeIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtotranscriptome.sam".format(badfj2_thresh=badfj2_thresh,transcriptomeIndex=transcriptomeIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
+    regBOWTIEPARAM = "--no-unal --no-mixed --no-sq -p 8 -I 0 -X {badfj2_thresh} -f --ff -x {regIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtoReg.sam".format(badfj2_thresh=badfj2_thresh,regIndex=regIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
+    juncBOWTIEPARAM ="--no-unal --no-mixed --no-sq -p 8 -I 0 -X {badfj2_thresh} -f --ff -x {juncIndex} -1 {r1file} -2 {r2file} -S {BadFJver2Dir}/{STEM}_BadFJtoJunc.sam".format(badfj2_thresh=badfj2_thresh,juncIndex=juncIndex,r1file=r1file,r2file=r2file,BadFJver2Dir=BadFJver2Dir,STEM=STEM)
 
     
     #do the bowtie alignment for each of the BadFJ Ver 2 indices above

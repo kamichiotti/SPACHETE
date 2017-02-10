@@ -18,6 +18,7 @@ MACHETE = os.path.dirname(os.path.abspath(__file__))
 description = "Required args: --circpipe-dir, --output-dir, --hg19Exons, --reg-indel-indices, and --circref-dir."
 parser = ArgumentParser(description=description)
 parser.add_argument("--circpipe-dir",required=True,dest="CIRCPIPE_DIR",help="Dir containing circ pipe output (incl linda's directories orig, circReads, logs, sample stats)")
+parser.add_argument("--mode",required=True,dest="MODE",help="How to run SPACHETE/MACHETE for human --> 'hg19', for mouse --> 'mm10'")
 parser.add_argument("--output-dir",required=True,dest="OUTPUT_DIR",help="Output directory for resuts. Directory path will be created recursively if it doesn't already exist. If it exists already, the directory will be deleted then created again.")
 parser.add_argument("--user-bp-dist",dest="USERBPDIST",type=int,default=1000,help="Default is %(default)s.")
 parser.add_argument("--num-junc-bases",dest="NUMBASESAROUNDJUNC",type=int,default=8,help="Default for linda's is 8 for read lengths < 70 and 13 for read lengths > 70.")
@@ -28,12 +29,17 @@ parser.add_argument("--circref-dir",required=True,dest="CIRCREF",help="Path to r
 parser.add_argument("--stem-include-list",required=False,dest="STEM_INCLUDE_LIST",help="If only want to run some of the stems then define this, otherwise will run all the stems")
 #parser.add_argument("REFGENOME",help="HG19 vs HG38;could upgrade to HG38.")
 
+#################################
+#  Whether or not to use SLURM  #
+#################################
+use_SLURM = False
 
 #################
 #  Build Paths  #
 #################
 args = parser.parse_args()
 CIRCPIPE_DIR = args.CIRCPIPE_DIR
+MODE = args.MODE
 OUTPUT_DIR = args.OUTPUT_DIR
 if not os.path.isdir(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
@@ -149,6 +155,7 @@ with open(FullStemFile,"r") as stem_file:
 
         OPTIONS = ""
         OPTIONS += " --circpipe-dir "+CIRCPIPE_DIR
+        OPTIONS += " --mode "+MODE
         OPTIONS += " --output-dir "+OUTPUT_DIR
         OPTIONS += " --hg19Exons "+EXONS
         OPTIONS += " --reg-indel-indices "+REG_INDEL_INDICES
@@ -160,30 +167,35 @@ with open(FullStemFile,"r") as stem_file:
         out_files.append(machete_out)
         err_files.append(machete_err)
 
-        """
-        #Sending jobs to the SLURM scheduler (comment out if not on SLURM)
-        job_name = stem[-4:] #annoying that the full job name doesn't show
-        slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
-        slurm_err_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".err")
 
-        sub_SLURM_name = os.path.join(OUTPUT_DIR,stem+"_job.sh")
-        with open(sub_SLURM_name,"w") as sub_SLURM:
-            sub_SLURM.write("#!/bin/bash\n")
-            sub_SLURM.write("python "+os.path.join(MACHETE,"spachete_run.py")+OPTIONS+"\n")
+        #Sending jobs to the SLURM scheduler if on Sherlock
+        #Being in this loop this creates an runs a separate job for each file
+        if use_SLURM:
+            job_name = stem[-4:]
+            slurm_out_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".out")
+            slurm_err_name = os.path.join(OUTPUT_DIR,"slurm_"+stem+".err")
 
-        subprocess.call(["sbatch","-p","horence","--mem=64000","--time=48:00:00",
-                         "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
-                         stdout=machete_out,stderr=machete_err)
-        """
+            sub_SLURM_name = os.path.join(OUTPUT_DIR,stem+"_job.sh")
+            with open(sub_SLURM_name,"w") as sub_SLURM:
+                sub_SLURM.write("#!/bin/bash\n")
+                sub_SLURM.write("python "+os.path.join(MACHETE,"spachete_run.py")+OPTIONS+"\n")
+
+            subprocess.call(["sbatch","-p","horence","--mem=64000","--time=48:00:00",
+                             "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
+                             stdout=machete_out,stderr=machete_err)
+
 
         #This is for multithreading w/out submitting a SLURM job (comment out if on SLURM)
-        processes.append(subprocess.Popen(["python",os.path.join(MACHETE,"spachete_run.py"),
-                                           "--circpipe-dir",CIRCPIPE_DIR,
-                                           "--output-dir",OUTPUT_DIR,
-                                           "--hg19Exons",EXONS,
-                                           "--reg-indel-indices",REG_INDEL_INDICES,
-                                           "--circref-dir",CIRCREF],
-                                           stdout=machete_out,stderr=machete_err))
+        #Does not submit any jobs but does run all the files in parallel.
+        if not use_SLURM:
+            processes.append(subprocess.Popen(["python",os.path.join(MACHETE,"spachete_run.py"),
+                                               "--circpipe-dir",CIRCPIPE_DIR,
+                                               "--mode",MODE,
+                                               "--output-dir",OUTPUT_DIR,
+                                               "--hg19Exons",EXONS,
+                                               "--reg-indel-indices",REG_INDEL_INDICES,
+                                               "--circref-dir",CIRCREF],
+                                               stdout=machete_out,stderr=machete_err))
 
 
 #Force all the jobs to complete before exiting

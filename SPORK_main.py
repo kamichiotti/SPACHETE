@@ -91,6 +91,9 @@ ref_gap_score = "--rfg 50,50"           #read gap set to be very high to not all
 min_score = "--score-min L,0,-0.10"     #minimum allowed Bowtie2 score
 allowed_mappings = "1"                  #allowed mappings of a given read. Currently not implemented
 fusion_max_gap = 0                      #size of splice site gap to allow for fusions
+mq_cutoff = 35                          #map-quality cutoff of adding the two reads around splice site
+mq_len = 25                             #how long of a sequence to take 5' and 3' of splice ind for mq check
+
 
 thirds_len = 36                         #length to cut the original reads into for the 5' and 3' pieces:
                                         #   |-------|---------------|-------|
@@ -159,7 +162,7 @@ constants_dict = {"input_dir":input_dir,"mode":mode,"splice_flank_len":splice_fl
                   "splice_finding_allowed_mismatches":splice_finding_allowed_mismatches,"unaligned_path":unaligned_path,
                   "splice_finding_allowed_mappings":splice_finding_allowed_mappings,"ref_gap_score":ref_gap_score,"use_prior":use_prior,
                   "allowed_mappings":allowed_mappings,"num_threads":num_threads,"reference":reference,"gtf_path":gtf_path,"collapse_thresh":collapse_thresh,
-                  "at_boundary_cutoff":at_boundary_cutoff,"span_cutoff":span_cutoff,"fusion_max_gap":fusion_max_gap}
+                  "at_boundary_cutoff":at_boundary_cutoff,"span_cutoff":span_cutoff,"fusion_max_gap":fusion_max_gap,"mq_cutoff":mq_cutoff,"mq_len":mq_len}
 
 ###################################
 # Loop through each R1 input file #
@@ -402,6 +405,14 @@ for file_name in file_names:
         write_time("-Found splice indices of "+str(len(denovo_junctions))+" junctions",start_find_splice_inds,timer_file_path)
         sys.stdout.write("SPORK: found splice indices. ["+str(len(denovo_junctions))+"] w/ splice and ["+str(len(no_splice_jcts))+"] w/out splice\n")
 
+        #Filter out jcts by mapping quality after splice indicies are found
+        start_filter_mq = time.time()
+        denovo_junctions, fail_jcts, anom_jcts = filter_map_quality(denovo_junctions, constants_dict)
+        filter_report = str(len(denovo_junctions))+" passed, "+str(len(fail_jcts))+" failed, "+str(len(anom_jcts))+" anomalous"
+        write_time("-Filtered by mq: "+filter_report,start_find_splice_inds,timer_file_path)
+        sys.stdout.write("SPORK: filtered jcts by mq: "+filter_report)
+        sys.stdout.flush()
+
         # Get GTF information for the identified denovo_junctions
         # Trying forward and rev-comp junction to see which one is closer to gtfs
         start_get_jct_gtf_info = time.time()
@@ -429,17 +440,19 @@ for file_name in file_names:
         for jct_ind in range(len(denovo_junctions)):
             forward_jct = forward_jcts[jct_ind]
             reverse_jct = reverse_jcts[jct_ind]
+            sys.stdout.write(str(forward_jct)+"\n")
+            sys.stdout.flush()
             forward_dist = abs(forward_jct.boundary_dist("donor"))+abs(forward_jct.boundary_dist("acceptor"))
             reverse_dist = abs(reverse_jct.boundary_dist("donor"))+abs(reverse_jct.boundary_dist("acceptor"))
             
-            #For tracking NUP214-XKR3, which is currently getting reported backwards and incorrectly
-            if(forward_jct.donor_sam.str_gene() == "NUP214" or
-               forward_jct.acceptor_sam.str_gene() == "NUP214" or
-               reverse_jct.donor_sam.str_gene() == "NUP214" or
-               reverse_jct.acceptor_sam.str_gene() == "NUP214"):
-                sys.stdout.write("===========================\n")
-                sys.stdout.write(forward_jct.log_string())
-                sys.stdout.write(reverse_jct.log_string())
+            #For tracking NUP214-XKR3, which was getting reported backwards and incorrectly (correct now)
+            #if(forward_jct.donor_sam.str_gene() == "NUP214" or
+            #   forward_jct.acceptor_sam.str_gene() == "NUP214" or
+            #   reverse_jct.donor_sam.str_gene() == "NUP214" or
+            #   reverse_jct.acceptor_sam.str_gene() == "NUP214"):
+            #    sys.stdout.write("===========================\n")
+            #    sys.stdout.write(forward_jct.log_string())
+            #    sys.stdout.write(reverse_jct.log_string())
 
             if forward_dist < reverse_dist:
                 gtf_denovo_junctions.append(forward_jct)
