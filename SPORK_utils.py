@@ -707,7 +707,8 @@ def find_closest_gtf(jct,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_
         if chrom_key in chrom_gtfs_don and chrom_key in chrom_don_libs:
             gtfs_don = chrom_gtfs_don[chrom_key]
             don_lib = chrom_don_libs[chrom_key]
-            closest_don_ind,its = bin_search_gtf(query,don_lib)
+            #closest_don_ind,its = bin_search_gtf(query,don_lib)
+            closest_don_ind = brute_search_gtf(query,don_lib) #<-- RB trying brute force
             closest_results["donor"] = gtfs_don[closest_don_ind]
 
     #Find the closest acceptor sam gtf
@@ -718,7 +719,8 @@ def find_closest_gtf(jct,chrom_gtfs_don,chrom_gtfs_acc,chrom_don_libs,chrom_acc_
         if chrom_key in chrom_gtfs_acc and chrom_key in chrom_acc_libs:
             gtfs_acc = chrom_gtfs_acc[chrom_key]
             acc_lib = chrom_acc_libs[chrom_key]
-            closest_acc_ind,its = bin_search_gtf(query,acc_lib)
+            #closest_acc_ind,its = bin_search_gtf(query,acc_lib)
+            closest_acc_ind = brute_search_gtf(query,acc_lib) #<-- RB trying brute force
             closest_results["acceptor"] = gtfs_acc[closest_acc_ind]
 
     return closest_results
@@ -768,6 +770,28 @@ def bin_search_gtf(query,library,start_ind=0,end_ind=-1,its=1,disp=False):
         else:
             return bin_search_gtf(query,library,mid_ind,end_ind,its+1,disp=disp) 
 
+#####################################
+#    Brute Force Closest GTF        #
+#####################################
+def brute_search_gtf(query,library):
+    """
+    Goal: do brute search through the library for the closest ind
+    Arguments:
+        query is an int
+        library is a list[int] of genomic positions to look through
+
+    Returns:
+        the index of the closest matching library value to the query
+    """
+
+    closest_ind = 0
+    closest_dist = abs(library[0]-query)
+    for ind,val in enumerate(library[1:]):
+        if abs(val-query) < closest_dist:
+            closest_ind = ind+1 #<-- have to add 1 since skipping first ind
+            closest_dist = abs(val-query)
+
+    return closest_ind
 
 #####################################
 #         Identify Fusions          #
