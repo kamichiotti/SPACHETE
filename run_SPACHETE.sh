@@ -34,10 +34,17 @@
 #####################################
 #          CML Test                 #
 #####################################
-KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
-OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/CML_uconn_test_3_1_17"
+#KNIFE_DIR="/scratch/PI/horence/gillian/CML_UConn/circpipe_K562"
+#OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/CML_uconn_test_3_1_17"
+#MODE="hg19"
+#STEM_INCLUDE_ONLY_LIST=("SRR3192411")
+
+#####################################
+#          Engstrom                 #
+#####################################
+KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
+OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/engstrom_3_3_17"
 MODE="hg19"
-STEM_INCLUDE_ONLY_LIST=("SRR3192411")
 
 
 #####################################
@@ -68,7 +75,7 @@ OPTIONS="$OPTIONS --output-dir $OUT_DIR"
 OPTIONS="$OPTIONS --hg19Exons $EXONS_DIR"
 OPTIONS="$OPTIONS --reg-indel-indices $INDEL_INDICES"
 OPTIONS="$OPTIONS --circref-dir $CIRC_REF"
-OPTIONS="$OPTIONS --SLURM True" #<-- comment this line out if not on SLURM
+#OPTIONS="$OPTIONS --SLURM True" #<-- comment this line out if not on SLURM
 if [ "$STEM_INCLUDE_ONLY_LIST" -a ${#STEM_INCLUDE_ONLY_LIST[@]} -gt 0 ]
 then
     INCLUDE_LIST=$(printf ",%s" "${STEM_INCLUDE_ONLY_LIST[@]}")
