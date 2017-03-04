@@ -1,7 +1,0 @@
-STATUS: using existing FullStemList.txt
-Stem list is:  ['SRR1772257']
-Found SRR1772257 in include stems, running SRR1772257
-SRR1772957 not in include stems, skipping SRR1772957
-SRR1777309 not in include stems, skipping SRR1777309
-SRR1777310 not in include stems, skipping SRR1777310
-Finished spachete feeder
