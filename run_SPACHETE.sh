@@ -24,6 +24,21 @@
 #A002-CGATGT_S1_L006/ A011_and_A012/       A016_and_A018/       HA08_and_HA09/
 #A003_and_A007/       A014_and_A015/       A019_and_HA07/
 
+##########################################
+#             CDR1as Sandbox             #
+##########################################
+KNIFE_DIR="/scratch/PI/horence/rob/KNIFE_dirs/knife_outputs/CDR1as_sandbox"
+OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/CDR1as_Sandbox_3_13_17"
+MODE="hg19"
+
+
+##########################################
+#       FusionMap Positive Test          #
+##########################################
+#KNIFE_DIR="/scratch/PI/horence/rob/KNIFE_dirs/knife_outputs/fusionmap"
+#OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/fm_pos_badfj3_test"
+#MODE="hg19"
+
 #####################################
 #             Fetal Test            #
 #####################################
@@ -42,18 +57,20 @@
 #####################################
 #          Engstrom                 #
 #####################################
-KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
-OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/engstrom_3_3_17"
-MODE="hg19"
+#KNIFE_DIR="/scratch/PI/horence/gillian/Engstrom/circpipe_engstrom"
+#OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/engstrom_3_3_17"
+#MODE="hg19"
 
 
 #####################################
+#                                   #
 #       References Paths            #
 # (should be the same across runs)  #
+#                                   #
 #####################################
 #NOTE!!
 #Have to change these paths to to same ones that MACHETE points to
-EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
+#EXONS_DIR="/scratch/PI/horence/gillian/HG19exons"
 INDEL_INDICES="/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/"
 CIRC_REF="/share/PI/horence/circularRNApipeline_Cluster/index"
 
@@ -72,10 +89,10 @@ OPTIONS="$OPTIONS --root-dir $ABS_PATH"
 OPTIONS="$OPTIONS --circpipe-dir $KNIFE_DIR"
 OPTIONS="$OPTIONS --mode $MODE"
 OPTIONS="$OPTIONS --output-dir $OUT_DIR"
-OPTIONS="$OPTIONS --hg19Exons $EXONS_DIR"
+#OPTIONS="$OPTIONS --hg19Exons $EXONS_DIR" #RB 3/13/17 not being used
 OPTIONS="$OPTIONS --reg-indel-indices $INDEL_INDICES"
 OPTIONS="$OPTIONS --circref-dir $CIRC_REF"
-#OPTIONS="$OPTIONS --SLURM True" #<-- comment this line out if not on SLURM
+OPTIONS="$OPTIONS --SLURM True" #<-- comment this line out if not on SLURM
 if [ "$STEM_INCLUDE_ONLY_LIST" -a ${#STEM_INCLUDE_ONLY_LIST[@]} -gt 0 ]
 then
     INCLUDE_LIST=$(printf ",%s" "${STEM_INCLUDE_ONLY_LIST[@]}")

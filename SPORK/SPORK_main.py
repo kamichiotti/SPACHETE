@@ -124,8 +124,9 @@ R1_patterns = []
 R2_patterns = []
 for file_name in all_file_names:
     if ".fq" in file_name or ".fastq" in file_name:
+
         # Pass the R2 files. Helps if a file looks like: "Human_simulated_reads1_2.fq"
-        if "R2" in file_name or "r2" in file_name or "_2.fq" in file_name:
+        if "R2." in file_name or "r2." in file_name or "_2.fq" in file_name:
             continue
         if "_1.fq" in file_name and (not stem_name or stem_name in file_name):
             R1_patterns.append("_1.fq")
@@ -135,22 +136,26 @@ for file_name in all_file_names:
             R1_patterns.append("_1.fastq")
             R2_patterns.append("_2.fastq")
             file_names.append(file_name)
-        elif "R1" in file_name and (not stem_name or stem_name in file_name):
-            R1_patterns.append("R1")
-            R2_patterns.append("R2")
+        elif "R1." in file_name and (not stem_name or stem_name in file_name):
+            R1_patterns.append("R1.")
+            R2_patterns.append("R2.")
             file_names.append(file_name)
-        elif "r1" in file_name and (not stem_name or stem_name in file_name):
-            R1_patterns.append("r1")
-            R2_patterns.append("r2")
+        elif "r1." in file_name and (not stem_name or stem_name in file_name):
+            R1_patterns.append("r1.")
+            R2_patterns.append("r2.")
             file_names.append(file_name)
-        elif "read1" in file_name and (not stem_name or stem_name in file_name):
-            R1_patterns.append("read1")
-            R2_patterns.append("read2")
+        elif "read1." in file_name and (not stem_name or stem_name in file_name):
+            R1_patterns.append("read1.")
+            R2_patterns.append("read2.")
             file_names.append(file_name)
-        elif "reads1" in file_name and (not stem_name or stem_name in file_name):
-            R1_patterns.append("reads1")
-            R2_patterns.append("reads2")
+        elif "reads1." in file_name and (not stem_name or stem_name in file_name):
+            R1_patterns.append("reads1.")
+            R2_patterns.append("reads2.")
             file_names.append(file_name)
+        else:
+            sys.stdout.write('SPORK main skipping: '+file_name+'\n')
+            continue
+
 
 # Making a dict that stores the input and constant values to make argument passing easier
 # This is just a hash that stores the constants set above to allow them easy to pass

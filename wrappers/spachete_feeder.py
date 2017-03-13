@@ -19,7 +19,7 @@ parser.add_argument("--output-dir",required=True,dest="OUTPUT_DIR",help="Output 
 parser.add_argument("--user-bp-dist",dest="USERBPDIST",type=int,default=1000,help="Default is %(default)s.")
 parser.add_argument("--num-junc-bases",dest="NUMBASESAROUNDJUNC",type=int,default=8,help="Default for linda's is 8 for read lengths < 70 and 13 for read lengths > 70.")
 parser.add_argument("--numIndels",dest="NumIndels",type=int,default=5,help="Default is %(default)s.")
-parser.add_argument("--hg19Exons",required=True,dest="EXONS",help="Path to HG19Exons. Formerly called PICKLEDIR.")
+#parser.add_argument("--hg19Exons",required=True,dest="EXONS",help="Path to HG19Exons. Formerly called PICKLEDIR.")
 parser.add_argument("--reg-indel-indices",required=True,dest="REG_INDEL_INDICES",help="Path to files with names like hg19_junctions_reg_indels_1.1.bt2l,hg19_junctions_reg_indels_2.rev.1.bt2l ... These are sometimes in a folder called IndelIndices.")
 parser.add_argument("--circref-dir",required=True,dest="CIRCREF",help="Path to reference libraries output by KNIFE - directory that contains hg19_genome, hg19_transcriptome, hg19_junctions_reg and hg19_junctions_scrambled bowtie indices.")
 parser.add_argument("--stem-include-list",required=False,dest="STEM_INCLUDE_LIST",help="If only want to run some of the stems then define this, otherwise will run all the stems")
@@ -52,7 +52,7 @@ USERBPDIST = args.USERBPDIST
 REFGENOME = "HG19" #args.REFGENOME
 NUMBASESAROUNDJUNC = args.NUMBASESAROUNDJUNC
 NumIndels = args.NumIndels
-EXONS = args.EXONS
+#EXONS = args.EXONS #RB 3/13/17 not used, commenting out
 REG_INDEL_INDICES = args.REG_INDEL_INDICES
 CIRCREF = args.CIRCREF
 ORIG_DIR = os.path.join(CIRCPIPE_DIR,"orig")
@@ -163,7 +163,7 @@ with open(FullStemFile,"r") as stem_file:
         OPTIONS += " --circpipe-dir "+CIRCPIPE_DIR
         OPTIONS += " --mode "+MODE
         OPTIONS += " --output-dir "+OUTPUT_DIR
-        OPTIONS += " --hg19Exons "+EXONS
+        #OPTIONS += " --hg19Exons "+EXONS
         OPTIONS += " --reg-indel-indices "+REG_INDEL_INDICES
         OPTIONS += " --circref-dir "+CIRCREF
 
@@ -186,7 +186,7 @@ with open(FullStemFile,"r") as stem_file:
                 sub_SLURM.write("#!/bin/bash\n")
                 sub_SLURM.write("python "+os.path.join(WRAPPERS,"spachete_run.py")+OPTIONS+"\n")
 
-            subprocess.call(["sbatch","-p","horence","--mem=80000","--time=48:00:00",
+            subprocess.call(["sbatch","-p","horence","--mem=60000","--time=48:00:00",
                              "-o",slurm_out_name,"-e",slurm_err_name,"-J",job_name,sub_SLURM_name],
                              stdout=machete_out,stderr=machete_err)
 
@@ -198,8 +198,7 @@ with open(FullStemFile,"r") as stem_file:
                                                "--root-dir",ROOT_DIR,
                                                "--circpipe-dir",CIRCPIPE_DIR,
                                                "--mode",MODE,
-                                               "--output-dir",OUTPUT_DIR,
-                                               "--hg19Exons",EXONS,
+                                               "--output-dir",OUTPUT_DIR,#"--hg19Exons",EXONS,
                                                "--reg-indel-indices",REG_INDEL_INDICES,
                                                "--circref-dir",CIRCREF],
                                                stdout=machete_out,stderr=machete_err))

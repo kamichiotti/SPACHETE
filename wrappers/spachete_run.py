@@ -61,7 +61,7 @@ parser.add_argument("--output-dir",required=True,dest="OUTPUT_DIR",help="Output 
 parser.add_argument("--user-bp-dist",dest="USERBPDIST",type=int,default=1000,help="Default is %(default)s.")
 parser.add_argument("--num-junc-bases",dest="NUMBASESAROUNDJUNC",type=int,default=8,help="Default for linda's is 8 for read lengths < 70 and 13 for read lengths > 70.")
 parser.add_argument("--numIndels",dest="NumIndels",type=int,default=5,help="Default is %(default)s.")
-parser.add_argument("--hg19Exons",required=True,dest="EXONS",help="Path to HG19Exons. Formerly called PICKLEDIR.")
+#parser.add_argument("--hg19Exons",required=True,dest="EXONS",help="Path to HG19Exons. Formerly called PICKLEDIR.")
 parser.add_argument("--reg-indel-indices",required=True,dest="REG_INDEL_INDICES",help="Path to files with names like hg19_junctions_reg_indels_1.1.bt2l,hg19_junctions_reg_indels_2.rev.1.bt2l ... These are sometimes in a folder called IndelIndices.")
 parser.add_argument("--circref-dir",required=True,dest="CIRCREF",help="Path to reference libraries output by KNIFE - directory that contains hg19_genome, hg19_transcriptome, hg19_junctions_reg and hg19_junctions_scrambled bowtie indices.")
 
@@ -81,7 +81,7 @@ if not os.path.isdir(OUTPUT_DIR):
 USERBPDIST = args.USERBPDIST
 NUMBASESAROUNDJUNC = args.NUMBASESAROUNDJUNC
 NumIndels = args.NumIndels
-EXONS = args.EXONS
+#EXONS = args.EXONS #RB 3/13/17 Isn't being used, commenting out
 REG_INDEL_INDICES = args.REG_INDEL_INDICES
 CIRCREF = args.CIRCREF
 
