@@ -28,8 +28,16 @@
 #             CDR1as Sandbox             #
 ##########################################
 KNIFE_DIR="/scratch/PI/horence/rob/KNIFE_dirs/knife_outputs/CDR1as_sandbox"
-OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/CDR1as_Sandbox_3_13_17"
+OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/CDR1as_sb_no_mq_3_15_17_25bp"
 MODE="hg19"
+
+##########################################
+#             CDR1as Full                #
+##########################################
+#KNIFE_DIR="/scratch/PI/horence/rob/KNIFE_dirs/knife_outputs/CDR1as_full"
+#OUT_DIR="/scratch/PI/horence/rob/SPACHETE_dirs/spachete_outputs/CDR1as_full_no_mq_3_13_17_25bp"
+#MODE="hg19"
+
 
 
 ##########################################

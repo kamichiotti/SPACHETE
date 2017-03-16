@@ -92,9 +92,9 @@ allowed_mappings = "1"                  #allowed mappings of a given read. Curre
 fusion_max_gap = 0                      #size of splice site gap to allow for fusions
 mq_cutoff = 35                          #map-quality cutoff of adding the two reads around splice site
 mq_len = 25                             #how long of a sequence to take 5' and 3' of splice ind for mq check
+filter_mq = False                       #toggle to control whether or not to mapq
 
-
-thirds_len = 36                         #length to cut the original reads into for the 5' and 3' pieces:
+thirds_len = 25                         #length to cut the original reads into for the 5' and 3' pieces:
                                         #   |-------|---------------|-------|
                                         #       ^     unused middle     ^
                                         #       |                       |
@@ -431,12 +431,13 @@ for file_name in file_names:
         sys.stdout.write("SPORK: found splice indices. ["+str(len(denovo_junctions))+"] w/ splice and ["+str(len(no_splice_jcts))+"] w/out splice\n")
 
         #Filter out jcts by mapping quality after splice indicies are found
-        start_filter_mq = time.time()
-        denovo_junctions, fail_jcts, anom_jcts = filter_map_quality(denovo_junctions, constants_dict)
-        filter_report = str(len(denovo_junctions))+" passed, "+str(len(fail_jcts))+" failed, "+str(len(anom_jcts))+" anomalous"
-        write_time("-Filtered by mq: "+filter_report,start_find_splice_inds,timer_file_path)
-        sys.stdout.write("SPORK: filtered jcts by mq: "+filter_report)
-        sys.stdout.flush()
+        if filter_mq:
+            start_filter_mq = time.time()
+            denovo_junctions, fail_jcts, anom_jcts = filter_map_quality(denovo_junctions, constants_dict)
+            filter_report = str(len(denovo_junctions))+" passed, "+str(len(fail_jcts))+" failed, "+str(len(anom_jcts))+" anomalous"
+            write_time("-Filtered by mq: "+filter_report,start_find_splice_inds,timer_file_path)
+            sys.stdout.write("SPORK: filtered jcts by mq: "+filter_report)
+            sys.stdout.flush()
 
         # Get GTF information for the identified denovo_junctions
         # Trying forward and rev-comp junction to see which one is closer to gtfs
