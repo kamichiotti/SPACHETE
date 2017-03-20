@@ -1,3 +1,0 @@
-Fetal_Lung_361_CAGATC_L005
-Fetal_Stomach_361_GCCAAT_L008
-Fetal_Stomach_403b_AGTTCC_L006

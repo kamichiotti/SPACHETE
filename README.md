@@ -41,14 +41,14 @@ will look the same as that of MACHETE, with an additional folder called "spork_o
 ```
 ## Changes should only need to be made in the SPACHETE_wrapper.sh in order to get spachete working.
 
-In this `SPACHETE_wrapper.sh` information such as data input paths, data output paths, and index paths will likely need to be changed, but most of them will be identical to what MACHETE currently uses on 7-Bridges:
+In this `run_SPACHETE.sh` information such as data input paths, data output paths, and index paths will likely need to be changed, but most of them will be identical to what MACHETE currently uses on 7-Bridges:
 
 1. `KNIFE_DIR` is the KNIFE output directory (same as MACHETE), that contains the `orig` file (i.e. "/scratch/PI/horence/gillian/CML_UConn/circpipe_K562")
 2. `OUT_DIR` is the directory location to save SPACHETE output (i.e. "/scratch/PI/horence/rob/spachete_outputs/SPACHETE_out_CML"). In this directory a subdirectory will be created for each stem in the KNIFE_DIR.
 3. `EXONS_DIR` should be the same path as that used for MACHETE (i.e. "/scratch/PI/horence/gillian/HG19exons")
 4. `INDEL_INDICES` is the same path as that used for MACHETE (i.e. "/scratch/PI/horence/gillian/HG19_reg_indels/toyIndelIndices/")
 5. `CIRC_REF` is the same path as that used for MACHETE (i.e. "/share/PI/horence/circularRNApipeline_Cluster/index")
-6. optionally can include a line to instruct SPACHETE to only run on certain stems. An example is `STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")` which only only run these two stems. If STEM_INCLUDE_ONLY_LIST is not defined or has nothing in it, all stems will be processed (note I'm not sure if any of `STEM_INCLUDE_ONLY_LIST` handling are bash-specific in `SPACHETE_wraper.sh`)
+6. optionally can include a line to instruct SPACHETE to only run on certain stems. An example is `STEM_INCLUDE_ONLY_LIST=("SRR3192413" "SRR3192415")` which only only run these two stems. If STEM_INCLUDE_ONLY_LIST is not defined or has nothing in it, all stems will be processed (note I'm not sure if any of `STEM_INCLUDE_ONLY_LIST` handling are bash-specific in `run_SPACHETE.sh`)
 
 
 
